@@ -52,8 +52,26 @@ namespace ShapeKeyTools
         /// </summary>
         public static void Initialize()
         {
-            SearchManager.useRegex = UseRegex;
-            SearchManager.caseSensitive = CaseSensitive;
+            try
+            {
+                SearchManager.useRegex = UseRegex;
+                SearchManager.caseSensitive = CaseSensitive;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"ShapeKeyToolSettings初期化エラー: {ex.Message}");
+                
+                // エラーが発生した場合はデフォルト値を使用
+                try
+                {
+                    SearchManager.useRegex = false;
+                    SearchManager.caseSensitive = false;
+                }
+                catch (System.Exception fallbackEx)
+                {
+                    Debug.LogError($"ShapeKeyToolSettingsフォールバック初期化エラー: {fallbackEx.Message}");
+                }
+            }
         }
 
         /// <summary>

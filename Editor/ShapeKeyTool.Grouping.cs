@@ -154,9 +154,21 @@ namespace ShapeKeyTools
                 var weightDict = new Dictionary<int, float>();
                 foreach (var shape in shapes)
                 {
-                    if (!weightDict.ContainsKey(shape.index))
+                    // 拡張シェイプキーの場合は元のシェイプキーのインデックスを使用
+                    int targetIndex = shape.index;
+                    if (shape.isExtended && !string.IsNullOrEmpty(shape.originalName))
                     {
-                        weightDict[shape.index] = shape.weight;
+                        // 元のシェイプキーを探す
+                        var originalShape = window.blendShapes.FirstOrDefault(s => s.name == shape.originalName);
+                        if (originalShape != null)
+                        {
+                            targetIndex = originalShape.index;
+                        }
+                    }
+                    
+                    if (!weightDict.ContainsKey(targetIndex))
+                    {
+                        weightDict[targetIndex] = shape.weight;
                     }
                 }
                 window.originalWeights[groupName] = weightDict;
@@ -168,18 +180,51 @@ namespace ShapeKeyTools
 
                 if (newIndex == 0)
                 {
-                    if (window.originalWeights[groupName].TryGetValue(shapes[i].index, out var orig))
+                    // スライダーが0の場合は元の値に戻す
+                    int targetIndex = shapes[i].index;
+                    if (shapes[i].isExtended && !string.IsNullOrEmpty(shapes[i].originalName))
+                    {
+                        // 元のシェイプキーを探す
+                        var originalShape = window.blendShapes.FirstOrDefault(s => s.name == shapes[i].originalName);
+                        if (originalShape != null)
+                        {
+                            targetIndex = originalShape.index;
+                        }
+                    }
+                    
+                    if (window.originalWeights[groupName].TryGetValue(targetIndex, out var orig))
+                    {
                         targetWeight = orig;
+                    }
                 }
                 else if (newIndex > 0 && i == newIndex - 1)
                 {
+                    // 選択されたシェイプキーを100%にする
                     targetWeight = 100f;
                 }
+                else
+                {
+                    // その他のシェイプキーは0%にする
+                    targetWeight = 0f;
+                }
 
-                bool wasNonZeroAtStart = window.originalWeights[groupName].TryGetValue(shapes[i].index, out var startW)
-                                         && startW > 0.01f;
-
-                if (skipNonZero && wasNonZeroAtStart) continue;
+                // 非ゼロ値をスキップする場合の処理
+                if (skipNonZero)
+                {
+                    int targetIndex = shapes[i].index;
+                    if (shapes[i].isExtended && !string.IsNullOrEmpty(shapes[i].originalName))
+                    {
+                        var originalShape = window.blendShapes.FirstOrDefault(s => s.name == shapes[i].originalName);
+                        if (originalShape != null)
+                        {
+                            targetIndex = originalShape.index;
+                        }
+                    }
+                    
+                    bool wasNonZeroAtStart = window.originalWeights[groupName].TryGetValue(targetIndex, out var startW)
+                                             && startW > 0.01f;
+                    if (wasNonZeroAtStart) continue;
+                }
 
                 Utility.SetWeight(window, shapes[i], targetWeight);
             }
@@ -202,9 +247,21 @@ namespace ShapeKeyTools
                 var weightDict = new Dictionary<int, float>();
                 foreach (var shape in visibleShapes)
                 {
-                    if (!weightDict.ContainsKey(shape.index))
+                    // 拡張シェイプキーの場合は元のシェイプキーのインデックスを使用
+                    int targetIndex = shape.index;
+                    if (shape.isExtended && !string.IsNullOrEmpty(shape.originalName))
                     {
-                        weightDict[shape.index] = shape.weight;
+                        // 元のシェイプキーを探す
+                        var originalShape = window.blendShapes.FirstOrDefault(s => s.name == shape.originalName);
+                        if (originalShape != null)
+                        {
+                            targetIndex = originalShape.index;
+                        }
+                    }
+                    
+                    if (!weightDict.ContainsKey(targetIndex))
+                    {
+                        weightDict[targetIndex] = shape.weight;
                     }
                 }
                 window.originalWeights[groupName] = weightDict;
@@ -216,18 +273,51 @@ namespace ShapeKeyTools
 
                 if (newIndex == 0)
                 {
-                    if (window.originalWeights[groupName].TryGetValue(visibleShapes[i].index, out var orig))
+                    // スライダーが0の場合は元の値に戻す
+                    int targetIndex = visibleShapes[i].index;
+                    if (visibleShapes[i].isExtended && !string.IsNullOrEmpty(visibleShapes[i].originalName))
+                    {
+                        // 元のシェイプキーを探す
+                        var originalShape = window.blendShapes.FirstOrDefault(s => s.name == visibleShapes[i].originalName);
+                        if (originalShape != null)
+                        {
+                            targetIndex = originalShape.index;
+                        }
+                    }
+                    
+                    if (window.originalWeights[groupName].TryGetValue(targetIndex, out var orig))
+                    {
                         targetWeight = orig;
+                    }
                 }
                 else if (newIndex > 0 && i == newIndex - 1)
                 {
+                    // 選択されたシェイプキーを100%にする
                     targetWeight = 100f;
                 }
+                else
+                {
+                    // その他のシェイプキーは0%にする
+                    targetWeight = 0f;
+                }
 
-                bool wasNonZeroAtStart = window.originalWeights[groupName].TryGetValue(visibleShapes[i].index, out var startW)
-                                         && startW > 0.01f;
-
-                if (skipNonZero && wasNonZeroAtStart) continue;
+                // 非ゼロ値をスキップする場合の処理
+                if (skipNonZero)
+                {
+                    int targetIndex = visibleShapes[i].index;
+                    if (visibleShapes[i].isExtended && !string.IsNullOrEmpty(visibleShapes[i].originalName))
+                    {
+                        var originalShape = window.blendShapes.FirstOrDefault(s => s.name == visibleShapes[i].originalName);
+                        if (originalShape != null)
+                        {
+                            targetIndex = originalShape.index;
+                        }
+                    }
+                    
+                    bool wasNonZeroAtStart = window.originalWeights[groupName].TryGetValue(targetIndex, out var startW)
+                                             && startW > 0.01f;
+                    if (wasNonZeroAtStart) continue;
+                }
 
                 Utility.SetWeight(window, visibleShapes[i], targetWeight);
             }
