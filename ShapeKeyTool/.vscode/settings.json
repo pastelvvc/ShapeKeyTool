@@ -1,0 +1,12 @@
+{
+    // エクスプローラーで .mata ファイルを非表示
+    "files.exclude": {
+      "**/*.meta": true
+    },
+  
+    // (任意) 検索結果にも .mata ファイルを出さない
+    "search.exclude": {
+      "**/*.meta": true
+    }
+  }
+  
