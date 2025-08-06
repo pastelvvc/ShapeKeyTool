@@ -14,9 +14,27 @@ namespace ShapeKeyTools
 
         internal static void Init(ShapeKeyToolWindow w)
         {
-            window = w;
-            state ??= new TreeViewState();
-            view ??= new ShapeKeyTreeView(state, w);
+            try
+            {
+                window = w;
+                state ??= new TreeViewState();
+                view ??= new ShapeKeyTreeView(state, w);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"TreeView初期化エラー: {ex.Message}");
+                
+                // エラーが発生した場合は再初期化を試行
+                try
+                {
+                    state = new TreeViewState();
+                    view = new ShapeKeyTreeView(state, w);
+                }
+                catch (System.Exception retryEx)
+                {
+                    Debug.LogError($"TreeView再初期化エラー: {retryEx.Message}");
+                }
+            }
         }
 
         internal static void Repaint()
@@ -25,7 +43,31 @@ namespace ShapeKeyTools
         }
 
         internal static void OnGUI(Rect r) => view?.OnGUI(r);
-        internal static void Reload() => view?.Reload();
+        internal static void Reload()
+        {
+            try
+            {
+                view?.Reload();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"TreeView再読み込みエラー: {ex.Message}");
+                
+                // エラーが発生した場合は再初期化を試行
+                try
+                {
+                    if (window != null && state != null)
+                    {
+                        view = new ShapeKeyTreeView(state, window);
+                        view.Reload();
+                    }
+                }
+                catch (System.Exception retryEx)
+                {
+                    Debug.LogError($"TreeView再初期化エラー: {retryEx.Message}");
+                }
+            }
+        }
         internal static TreeViewState GetTreeViewState() => state;
 
         private class ShapeKeyTreeView : TreeView
@@ -320,6 +362,9 @@ namespace ShapeKeyTools
                 }
 
                 Reload();
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             private void MoveGroupToEnd(string groupName)
@@ -349,6 +394,9 @@ namespace ShapeKeyTools
 
                 // TreeViewを更新
                 TreeViewPart.Reload();
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             private void MoveShapeKeyToEnd(string shapeName)
@@ -369,6 +417,9 @@ namespace ShapeKeyTools
                         break;
                     }
                 }
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             private void ReorderGroups(string sourceGroup, string targetGroup, int insertIndex)
@@ -388,7 +439,7 @@ namespace ShapeKeyTools
                 
                 // 新しい位置に挿入
                 list.Insert(adjustedInsertIndex, sourceGroup);
-
+                
                 // 新しい順序で Dictionary を再構築
                 var newGroups = new Dictionary<string, List<BlendShape>>();
                 var newFoldouts = new Dictionary<string, bool>();
@@ -409,6 +460,9 @@ namespace ShapeKeyTools
 
                 // TreeViewを更新
                 TreeViewPart.Reload();
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             private void MoveShapeKeyToGroup(string shapeName, string targetGroup)
@@ -417,6 +471,7 @@ namespace ShapeKeyTools
                 BlendShape shapeToMove = null;
                 string sourceGroup = "";
 
+                // 元のグループからシェイプキーを削除
                 foreach (var group in tool.groupedShapes)
                 {
                     var shape = group.Value.FirstOrDefault(s => s.name == shapeName);
@@ -424,44 +479,52 @@ namespace ShapeKeyTools
                     {
                         shapeToMove = shape;
                         sourceGroup = group.Key;
+                        group.Value.Remove(shape);
                         break;
                     }
                 }
 
-                if (shapeToMove != null && sourceGroup != targetGroup)
+                // 新しいグループに追加
+                if (shapeToMove != null && tool.groupedShapes.ContainsKey(targetGroup))
                 {
-                    // 元のグループから削除
-                    tool.groupedShapes[sourceGroup].Remove(shapeToMove);
-
-                    // 新しいグループに追加
-                    if (!tool.groupedShapes.ContainsKey(targetGroup))
-                    {
-                        tool.groupedShapes[targetGroup] = new List<BlendShape>();
-                    }
                     tool.groupedShapes[targetGroup].Add(shapeToMove);
-
-                    
                 }
+
+                // TreeViewを更新
+                TreeViewPart.Reload();
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             private void ReorderShapeKey(string sourceShape, string targetShape, int insertIndex)
             {
-                // 同じグループ内でのシェイプキーの順序変更
+                // シェイプキーの順序を変更
                 foreach (var group in tool.groupedShapes)
                 {
                     var shapes = group.Value;
                     int sourceIndex = shapes.FindIndex(s => s.name == sourceShape);
+                    int targetIndex = shapes.FindIndex(s => s.name == targetShape);
 
-                    if (sourceIndex != -1)
+                    if (sourceIndex != -1 && targetIndex != -1)
                     {
                         var shapeToMove = shapes[sourceIndex];
                         shapes.RemoveAt(sourceIndex);
-                        shapes.Insert(insertIndex, shapeToMove);
-
                         
+                        // insertIndexを調整（ソースアイテムが削除されたため）
+                        int adjustedInsertIndex = insertIndex;
+                        if (adjustedInsertIndex > sourceIndex)
+                        {
+                            adjustedInsertIndex--;
+                        }
+                        
+                        shapes.Insert(adjustedInsertIndex, shapeToMove);
                         break;
                     }
                 }
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             public void StartRename(int itemId, string currentName)
@@ -597,6 +660,14 @@ namespace ShapeKeyTools
                                     tool.groupFoldouts.Remove(oldGroupName);
                                     tool.groupFoldouts[renameText] = foldoutState;
                                 }
+
+                                // テストスライダーの状態も移行
+                                if (tool.groupTestSliders.ContainsKey(oldGroupName))
+                                {
+                                    float testSliderValue = tool.groupTestSliders[oldGroupName];
+                                    tool.groupTestSliders.Remove(oldGroupName);
+                                    tool.groupTestSliders[renameText] = testSliderValue;
+                                }
                             }
                         }
                         else
@@ -619,6 +690,9 @@ namespace ShapeKeyTools
 
                 CancelRename();
                 Reload();
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             private void CancelRename()
@@ -707,50 +781,58 @@ namespace ShapeKeyTools
 
             private void AddNewGroup()
             {
-                // 新しいグループ名を生成（重複しないように）
-                string baseName = "新しいグループ";
-                string newGroupName = baseName;
+                string newGroupName = "新しいグループ";
                 int counter = 1;
-
+                
+                // 重複しない名前を生成
                 while (tool.groupedShapes.ContainsKey(newGroupName))
                 {
-                    newGroupName = $"{baseName} ({counter})";
+                    newGroupName = $"新しいグループ ({counter})";
                     counter++;
                 }
 
                 // 新しいグループを追加
                 tool.groupedShapes[newGroupName] = new List<BlendShape>();
-                tool.groupFoldouts[newGroupName] = true; // デフォルトで開く
-                tool.groupTestSliders[newGroupName] = 0f; // テストスライダーの初期化
-
-                
+                tool.groupFoldouts[newGroupName] = true;
+                tool.groupTestSliders[newGroupName] = 0f;
 
                 // TreeViewを更新
                 Reload();
-
-                // メインウィンドウも更新
-                TreeViewPart.Repaint();
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
 
 
             private void DeleteGroup(string groupName)
             {
-                // 削除確認ダイアログ
-                bool shouldDelete = EditorUtility.DisplayDialog(
+                if (groupName == "その他")
+                {
+                    EditorUtility.DisplayDialog(
+                        "エラー",
+                        "\"その他\"グループは削除できません。",
+                        "OK"
+                    );
+                    return;
+                }
+
+                bool confirmed = EditorUtility.DisplayDialog(
                     "グループ削除の確認",
-                    $"グループ '{groupName}' を削除しますか？\n\nこのグループ内のシェイプキーは「その他」グループに移動されます。",
+                    $"グループ「{groupName}」を削除しますか？\n\n" +
+                    "このグループに含まれるシェイプキーは「その他」グループに移動されます。",
                     "削除",
                     "キャンセル"
                 );
 
-                if (!shouldDelete) return;
+                if (!confirmed)
+                    return;
 
                 // グループ内のシェイプキーを「その他」グループに移動
                 if (tool.groupedShapes.ContainsKey(groupName))
                 {
                     var shapesToMove = tool.groupedShapes[groupName];
-
+                    
                     // 「その他」グループが存在しない場合は作成
                     if (!tool.groupedShapes.ContainsKey("その他"))
                     {
@@ -761,20 +843,18 @@ namespace ShapeKeyTools
 
                     // シェイプキーを「その他」グループに移動
                     tool.groupedShapes["その他"].AddRange(shapesToMove);
-
-                    // 元のグループを削除
-                    tool.groupedShapes.Remove(groupName);
-                    tool.groupFoldouts.Remove(groupName);
-                    tool.groupTestSliders.Remove(groupName);
-
-
                 }
+
+                // グループを削除
+                tool.groupedShapes.Remove(groupName);
+                tool.groupFoldouts.Remove(groupName);
+                tool.groupTestSliders.Remove(groupName);
 
                 // TreeViewを更新
                 Reload();
-
-                // メインウィンドウも更新
-                TreeViewPart.Repaint();
+                
+                // 右側のパネルを更新
+                tool.Repaint();
             }
 
             protected override void ContextClickedItem(int id)

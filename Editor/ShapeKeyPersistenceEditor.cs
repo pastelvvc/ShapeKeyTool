@@ -132,6 +132,12 @@ namespace ShapeKeyTools
             {
                 window.lockedShapeKeys[locked.Key] = locked.Value;
             }
+
+            // TreeViewを更新
+            TreeViewPart.Reload();
+            
+            // 右側のパネルを更新
+            window.Repaint();
         }
     }
 } 

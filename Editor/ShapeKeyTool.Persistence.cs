@@ -100,14 +100,21 @@ namespace ShapeKeyTools
         /// </summary>
         public static void LoadData(ShapeKeyToolWindow window)
         {
-            if (window?.selectedRenderer == null)
-                return;
-
-            var target = window.selectedRenderer.gameObject;
-            var persistence = target.GetComponent<ShapeKeyPersistence>();
-            if (persistence != null && persistence.HasData())
+            try
             {
-                ShapeKeyPersistenceEditor.LoadData(persistence, window);
+                if (window?.selectedRenderer == null)
+                    return;
+
+                var target = window.selectedRenderer.gameObject;
+                var persistence = target.GetComponent<ShapeKeyPersistence>();
+                if (persistence != null && persistence.HasData())
+                {
+                    ShapeKeyPersistenceEditor.LoadData(persistence, window);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"ShapeKeyPersistenceManager.LoadDataエラー: {ex.Message}");
             }
         }
 

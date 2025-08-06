@@ -43,44 +43,59 @@ namespace ShapeKeyTools
         }
 
         /// <summary>
-        /// 検索UIを描画
+        /// 検索UIを描画する
         /// </summary>
         private void DrawSearchUI()
         {
-            EditorGUILayout.BeginVertical("box");
-
-            // 検索テキストフィールド
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("検索:", GUILayout.Width(40));
-            string newSearchText = EditorGUILayout.TextField(SearchManager.shapeKeySearchText, GUILayout.ExpandWidth(true));
+            EditorGUILayout.BeginHorizontal("box");
             
-            // 検索テキストが変更された場合
+            // 検索フィールド
+            string newSearchText = EditorGUILayout.TextField(
+                "検索",
+                SearchManager.shapeKeySearchText,
+                GUILayout.Width(200)
+            );
+            
             if (newSearchText != SearchManager.shapeKeySearchText)
             {
                 SearchManager.shapeKeySearchText = newSearchText;
                 window.Repaint();
             }
             
-            // クリアボタン
+            // 正規表現トグル
+            bool newUseRegex = EditorGUILayout.Toggle(
+                "正規表現",
+                SearchManager.useRegex,
+                GUILayout.Width(80)
+            );
+            
+            if (newUseRegex != SearchManager.useRegex)
+            {
+                SearchManager.useRegex = newUseRegex;
+                window.Repaint();
+            }
+            
+            // 大文字小文字を区別するトグル
+            bool newCaseSensitive = EditorGUILayout.Toggle(
+                "大文字小文字を区別",
+                SearchManager.caseSensitive,
+                GUILayout.Width(120)
+            );
+            
+            if (newCaseSensitive != SearchManager.caseSensitive)
+            {
+                SearchManager.caseSensitive = newCaseSensitive;
+                window.Repaint();
+            }
+            
+            // 検索クリアボタン
             if (GUILayout.Button("クリア", GUILayout.Width(50)))
             {
                 SearchManager.shapeKeySearchText = "";
                 window.Repaint();
             }
+            
             EditorGUILayout.EndHorizontal();
-            
-
-            
-            // 正規表現が無効な場合の警告
-            if (SearchManager.useRegex && !string.IsNullOrEmpty(SearchManager.shapeKeySearchText))
-            {
-                if (!SearchManager.IsValidRegex(SearchManager.shapeKeySearchText))
-                {
-                    EditorGUILayout.HelpBox("無効な正規表現です", MessageType.Warning);
-                }
-            }
-            
-            EditorGUILayout.EndVertical();
         }
 
         /// <summary>
@@ -125,7 +140,28 @@ namespace ShapeKeyTools
                         Serialization.ImportJson(window);
                         window.fileMenuIndex = 0;
                         break;
-                    case 3: // コンポーネントの削除
+                    case 3: // 永続化データの読み込み
+                        if (window.selectedRenderer != null)
+                        {
+                            try
+                            {
+                                ShapeKeyPersistenceManager.LoadData(window);
+                                TreeViewPart.Reload();
+                                window.Repaint();
+                                EditorUtility.DisplayDialog("読み込み完了", "永続化データを読み込みました。", "OK");
+                            }
+                            catch (System.Exception ex)
+                            {
+                                EditorUtility.DisplayDialog("読み込みエラー", $"データの読み込みに失敗しました:\n{ex.Message}", "OK");
+                            }
+                        }
+                        else
+                        {
+                            EditorUtility.DisplayDialog("エラー", "読み込み対象のオブジェクトが選択されていません。", "OK");
+                        }
+                        window.fileMenuIndex = 0;
+                        break;
+                    case 4: // コンポーネントの削除
                         window.RemovePersistenceComponent();
                         window.fileMenuIndex = 0;
                         break;
@@ -146,14 +182,20 @@ namespace ShapeKeyTools
                     case 1: // すべて開く
                         foreach (var group in window.groupedShapes)
                         {
-                            window.groupFoldouts[group.Key] = true;
+                            if (!window.groupFoldouts.ContainsKey(group.Key))
+                                window.groupFoldouts[group.Key] = true;
+                            else
+                                window.groupFoldouts[group.Key] = true;
                         }
                         window.displayMenuIndex = 0;
                         break;
                     case 2: // すべて閉じる
                         foreach (var group in window.groupedShapes)
                         {
-                            window.groupFoldouts[group.Key] = false;
+                            if (!window.groupFoldouts.ContainsKey(group.Key))
+                                window.groupFoldouts[group.Key] = false;
+                            else
+                                window.groupFoldouts[group.Key] = false;
                         }
                         window.displayMenuIndex = 0;
                         break;
@@ -266,27 +308,7 @@ namespace ShapeKeyTools
                         TreeViewPart.Reload();
                         window.shapeKeyMenuIndex = 0;
                         break;
-                    case 3: // 値が入っているものをロックする
-                        foreach (var group in window.groupedShapes)
-                        {
-                            foreach (var shape in group.Value)
-                            {
-                                if (shape.weight > 0.01f)
-                                {
-                                    shape.isLocked = true;
-                                    window.lockedShapeKeys[shape.index] = true;
-                                }
-                            }
-                        }
-                        EditorUtility.SetDirty(window.selectedRenderer);
-                        TreeViewPart.Reload();
-                        window.shapeKeyMenuIndex = 0;
-                        break;
-                    case 4: // 拡張シェイプキーを一括削除
-                        window.DeleteAllExtendedShapeKeys();
-                        window.shapeKeyMenuIndex = 0;
-                        break;
-                    case 5: // TreeViewをリセットする
+                    case 3: // TreeViewをリセットする
                         window.ResetTreeView();
                         window.shapeKeyMenuIndex = 0;
                         break;
@@ -294,21 +316,29 @@ namespace ShapeKeyTools
             }
 
             // オプションメニュー
-            Rect optionButtonRect = GUILayoutUtility.GetRect(
-                new GUIContent("オプション"),
-                GUI.skin.button,
+            int newOptionIndex = EditorGUILayout.Popup(
+                window.optionMenuIndex,
+                window.optionMenuOptions,
                 GUILayout.Width(60)
             );
-            if (GUI.Button(optionButtonRect, "オプション"))
+            if (newOptionIndex != window.optionMenuIndex)
             {
-                // オプションメニューを表示（ボタンの位置に固定）
-                Rect menuRect = new Rect(
-                    optionButtonRect.x,
-                    optionButtonRect.y + optionButtonRect.height,
-                    optionButtonRect.width,
-                    0
-                );
-                window.ShowOptionMenu(menuRect);
+                window.optionMenuIndex = newOptionIndex;
+                switch (window.optionMenuIndex)
+                {
+                    case 1: // オプション1
+                        window.option1Enabled = !window.option1Enabled;
+                        window.optionMenuIndex = 0;
+                        break;
+                    case 2: // オプション2
+                        window.option2Enabled = !window.option2Enabled;
+                        window.optionMenuIndex = 0;
+                        break;
+                    case 3: // オプション3
+                        window.option3Enabled = !window.option3Enabled;
+                        window.optionMenuIndex = 0;
+                        break;
+                }
             }
 
             EditorGUILayout.EndHorizontal();
@@ -330,6 +360,12 @@ namespace ShapeKeyTools
 
             EditorGUILayout.Space(4);
 
+            // オプション設定
+            EditorGUILayout.BeginHorizontal("box");
+            window.skipNonZeroValues = EditorGUILayout.Toggle("非ゼロ値をスキップ", window.skipNonZeroValues);
+            EditorGUILayout.EndHorizontal();
+
+            // シェイプキーの表示
             if (window.groupedShapes.Count > 0)
             {
                 window.scrollPosition = EditorGUILayout.BeginScrollView(window.scrollPosition);
@@ -387,15 +423,20 @@ namespace ShapeKeyTools
                     {
                         // アコーディオンヘッダー
                         EditorGUILayout.BeginHorizontal("box");
-                        window.groupFoldouts[groupName] = EditorGUILayout.Foldout(
-                            window.groupFoldouts[groupName],
+                        
+                        // 安全なアクセス
+                        bool isExpanded = window.groupFoldouts.ContainsKey(groupName) ? window.groupFoldouts[groupName] : false;
+                        isExpanded = EditorGUILayout.Foldout(
+                            isExpanded,
                             $"{groupName} ({visibleShapes.Count})",
                             true
                         );
+                        window.groupFoldouts[groupName] = isExpanded;
+                        
                         EditorGUILayout.EndHorizontal();
 
                         // アコーディオンコンテンツ
-                        if (window.groupFoldouts[groupName])
+                        if (isExpanded)
                         {
                             EditorGUI.indentLevel++;
 
@@ -438,215 +479,9 @@ namespace ShapeKeyTools
                             // シェイプキーのスライダー
                             foreach (var blendShape in visibleShapes)
                             {
-                                EditorGUILayout.BeginHorizontal();
-
-                                bool newLocked = EditorGUILayout.Toggle(
-                                    blendShape.isLocked,
-                                    GUILayout.Width(20)
-                                );
-                                if (newLocked != blendShape.isLocked)
-                                {
-                                    blendShape.isLocked = newLocked;
-                                    window.lockedShapeKeys[blendShape.index] = newLocked;
-                                    
-                                    // 自動保存を実行
-                                    ShapeKeyPersistenceManager.AutoSave(window);
-                                }
-
-                                // ロックボタンと名前の間に間隔を追加
-                                GUILayout.Space(15);
-
-                                var labelStyle = new GUIStyle(EditorStyles.label);
-                                if (blendShape.isLocked)
-                                {
-                                    labelStyle.normal.textColor = Color.gray;
-                                }
-                                
-                                // 拡張シェイプキーの場合は色を変更
-                                if (blendShape.isExtended)
-                                {
-                                    labelStyle.normal.textColor = Color.cyan;
-                                }
-                                
-                                // 検索結果のハイライト
-                                string displayName = blendShape.name;
-                                if (!string.IsNullOrEmpty(SearchManager.shapeKeySearchText))
-                                {
-                                    displayName = SearchManager.GetHighlightedText(blendShape.name, SearchManager.shapeKeySearchText, SearchManager.useRegex, SearchManager.caseSensitive);
-                                }
-                                
-                                GUILayout.Label(displayName, labelStyle, GUILayout.Width(150));
-
-                                EditorGUI.BeginDisabledGroup(blendShape.isLocked);
-                                
-                                // 拡張シェイプキーの場合は範囲を拡張
-                                if (blendShape.isExtended)
-                                {
-                                    float extendedMinValue = blendShape.minValue;
-                                    float extendedMaxValue = blendShape.maxValue;
-                                    float extendedNewWeight = EditorGUILayout.Slider(blendShape.weight, extendedMinValue, extendedMaxValue);
-                                    
-                                    // 値の表示
-                                    GUILayout.Label($"{extendedNewWeight:F1}", GUILayout.Width(50));
-                                    
-                                    if (!blendShape.isLocked && Mathf.Abs(extendedNewWeight - blendShape.weight) > 0.01f)
-                                    {
-                                        blendShape.weight = extendedNewWeight;
-                                        
-                                        // 拡張シェイプキーの場合は永続化マネージャーに情報を更新
-                                        if (blendShape.isExtended)
-                                        {
-                                            var extendedInfo = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
-                                            ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfo);
-                                        }
-                                        
-                                        // 拡張シェイプキーの場合は直接メッシュに適用
-                                        window.ApplyExtendedShapeKeyWeight(blendShape);
-                                        
-                                        // TreeViewを自動更新
-                                        TreeViewPart.Reload();
-                                    }
-                                }
-                                else
-                                {
-                                    // 通常のシェイプキーでも、拡張パラメータが存在するかチェック
-                                    var extendedInfo = ExtendedShapeKeyInfo.TryParseFromName(blendShape.name, out var info);
-                                    
-                                    if (extendedInfo)
-                                    {
-                                        // 拡張パラメータが存在する場合は範囲を拡張（applyExtendedShapeKeysの設定に関係なく）
-                                        float extendedMinValue = info.minValue;
-                                        float extendedMaxValue = info.maxValue;
-                                        float extendedNewWeight = EditorGUILayout.Slider(blendShape.weight, extendedMinValue, extendedMaxValue);
-                                        
-                                        // 値の表示
-                                        GUILayout.Label($"{extendedNewWeight:F1}", GUILayout.Width(50));
-                                        
-                                        if (!blendShape.isLocked && Mathf.Abs(extendedNewWeight - blendShape.weight) > 0.01f)
-                                        {
-                                            blendShape.weight = extendedNewWeight;
-                                            
-                                            // 拡張シェイプキーの場合は永続化マネージャーに情報を更新
-                                            if (blendShape.isExtended)
-                                            {
-                                                var extendedInfoForUpdate = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
-                                                ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForUpdate);
-                                            }
-                                            
-                                            // 拡張シェイプキーの場合は直接メッシュに適用
-                                            window.ApplyExtendedShapeKeyWeight(blendShape);
-                                            
-                                            // TreeViewを自動更新
-                                            TreeViewPart.Reload();
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // Maxボタン
-                                        var maxButtonRect = GUILayoutUtility.GetRect(new GUIContent("Max"), GUI.skin.button, GUILayout.Width(40));
-                                        bool isMaxButtonHovered = maxButtonRect.Contains(Event.current.mousePosition);
-                                        
-                                        // 拡張シェイプキーの場合は元のシェイプキーのインデックスを使用
-                                        int targetIndex = blendShape.index;
-                                        if (blendShape.isExtended && !string.IsNullOrEmpty(blendShape.originalName))
-                                        {
-                                            // 元のシェイプキーを探す
-                                            var originalShape = window.blendShapes.FirstOrDefault(s => s.name == blendShape.originalName);
-                                            if (originalShape != null)
-                                            {
-                                                targetIndex = originalShape.index;
-                                            }
-                                        }
-                                        
-                                        // マウスオーバーで100%プレビュー
-                                        if (isMaxButtonHovered && !blendShape.isLocked && targetIndex >= 0)
-                                        {
-                                            // 元の値を保存（初回のみ）
-                                            if (!window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
-                                            {
-                                                window.originalWeightsForMaxPreview[targetIndex] = blendShape.weight;
-                                            }
-                                            
-                                            // 100%に設定
-                                            if (Mathf.Abs(blendShape.weight - 100f) > 0.01f)
-                                            {
-                                                blendShape.weight = 100f;
-                                                window.selectedRenderer.SetBlendShapeWeight(targetIndex, 100f);
-                                                Utility.MarkRendererDirty(window.selectedRenderer);
-                                                SceneView.RepaintAll();
-                                            }
-                                            
-                                            // ボタンの色を変更してホバー状態を表示
-                                            GUI.color = Color.yellow;
-                                            
-                                            // マウスオーバー中は継続的にRepaint
-                                            window.Repaint();
-                                        }
-                                        else if (!isMaxButtonHovered && window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
-                                        {
-                                            // マウスが離れたら元の値に戻す
-                                            float originalWeight = window.originalWeightsForMaxPreview[targetIndex];
-                                            if (Mathf.Abs(blendShape.weight - 100f) < 0.01f) // 100%の時のみ戻す
-                                            {
-                                                blendShape.weight = originalWeight;
-                                                window.selectedRenderer.SetBlendShapeWeight(targetIndex, originalWeight);
-                                                Utility.MarkRendererDirty(window.selectedRenderer);
-                                                SceneView.RepaintAll();
-                                            }
-                                            window.originalWeightsForMaxPreview.Remove(targetIndex);
-                                        }
-                                        
-                                        // スライダーを描画（ホバー中は100%を表示）
-                                        float displayWeight = isMaxButtonHovered && window.originalWeightsForMaxPreview.ContainsKey(targetIndex) ? 100f : blendShape.weight;
-                                        float normalNewWeight = EditorGUILayout.Slider(displayWeight, 0f, 100f);
-                                        
-                                        // ボタンを描画
-                                        if (GUI.Button(maxButtonRect, "Max"))
-                                        {
-                                            if (!blendShape.isLocked && targetIndex >= 0)
-                                            {
-                                                blendShape.weight = 100f;
-                                                window.selectedRenderer.SetBlendShapeWeight(targetIndex, 100f);
-                                                Utility.MarkRendererDirty(window.selectedRenderer);
-                                                
-                                                // 拡張シェイプキーが存在する場合は永続化マネージャーを更新
-                                                if (blendShape.isExtended)
-                                                {
-                                                    var extendedInfoForMax = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
-                                                    ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForMax);
-                                                }
-                                                
-                                                SceneView.RepaintAll();
-                                                TreeViewPart.Reload();
-                                            }
-                                        }
-                                        
-                                        // ボタンの色をリセット
-                                        GUI.color = Color.white;
-                                        
-                                        // スライダーの値が変更された場合
-                                        if (!blendShape.isLocked && Mathf.Abs(normalNewWeight - blendShape.weight) > 0.01f)
-                                        {
-                                            Utility.SetWeight(window, blendShape, normalNewWeight);
-                                            Utility.MarkRendererDirty(window.selectedRenderer);
-                                            
-                                            // 拡張シェイプキーが存在する場合は永続化マネージャーを更新
-                                            if (blendShape.isExtended)
-                                            {
-                                                var extendedInfoForSlider = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
-                                                ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForSlider);
-                                            }
-                                            
-                                            // TreeViewを自動更新
-                                            TreeViewPart.Reload();
-                                        }
-                                    }
-                                }
-                                
-                                EditorGUI.EndDisabledGroup();
-
-                                EditorGUILayout.EndHorizontal();
+                                DrawShapeKeySlider(blendShape);
                             }
+
                             EditorGUI.indentLevel--;
                         }
                     }
@@ -663,6 +498,228 @@ namespace ShapeKeyTools
             }
 
             GUILayout.EndArea();
+        }
+
+        /// <summary>
+        /// シェイプキーのスライダーを描画する
+        /// </summary>
+        private void DrawShapeKeySlider(BlendShape blendShape)
+        {
+            EditorGUILayout.BeginHorizontal();
+
+            bool newLocked = EditorGUILayout.Toggle(
+                blendShape.isLocked,
+                GUILayout.Width(20)
+            );
+            if (newLocked != blendShape.isLocked)
+            {
+                blendShape.isLocked = newLocked;
+                window.lockedShapeKeys[blendShape.index] = newLocked;
+                
+                // 自動保存を無効化（シェイプキーの値は保存しない）
+                // ShapeKeyPersistenceManager.AutoSave(window);
+            }
+
+            // ロックボタンと名前の間に間隔を追加
+            GUILayout.Space(15);
+
+            var labelStyle = new GUIStyle(EditorStyles.label);
+            if (blendShape.isLocked)
+            {
+                labelStyle.normal.textColor = Color.gray;
+            }
+            
+            // 拡張シェイプキーの場合は色を変更
+            if (blendShape.isExtended)
+            {
+                labelStyle.normal.textColor = Color.cyan;
+            }
+            
+            // 検索結果のハイライト
+            string displayName = blendShape.name;
+            if (!string.IsNullOrEmpty(SearchManager.shapeKeySearchText))
+            {
+                displayName = SearchManager.GetHighlightedText(blendShape.name, SearchManager.shapeKeySearchText, SearchManager.useRegex, SearchManager.caseSensitive);
+            }
+            
+            GUILayout.Label(displayName, labelStyle, GUILayout.Width(150));
+
+            EditorGUI.BeginDisabledGroup(blendShape.isLocked);
+            
+            // 拡張シェイプキーの場合は範囲を拡張
+            if (blendShape.isExtended)
+            {
+                float extendedMinValue = blendShape.minValue;
+                float extendedMaxValue = blendShape.maxValue;
+                float extendedNewWeight = EditorGUILayout.Slider(blendShape.weight, extendedMinValue, extendedMaxValue);
+                
+                // 値の表示
+                GUILayout.Label($"{extendedNewWeight:F1}", GUILayout.Width(50));
+                
+                if (!blendShape.isLocked && Mathf.Abs(extendedNewWeight - blendShape.weight) > 0.01f)
+                {
+                    blendShape.weight = extendedNewWeight;
+                    
+                    // 拡張シェイプキーの場合は永続化マネージャーに情報を更新
+                    if (blendShape.isExtended)
+                    {
+                        var extendedInfo = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
+                        ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfo);
+                    }
+                    
+                    // 拡張シェイプキーの場合は直接メッシュに適用
+                    window.ApplyExtendedShapeKeyWeight(blendShape);
+                    
+                    // TreeViewを自動更新
+                    TreeViewPart.Reload();
+                }
+            }
+            else
+            {
+                // 通常のシェイプキーでも、拡張パラメータが存在するかチェック
+                var extendedInfo = ExtendedShapeKeyInfo.TryParseFromName(blendShape.name, out var info);
+                
+                if (extendedInfo)
+                {
+                    // 拡張パラメータが存在する場合は範囲を拡張（applyExtendedShapeKeysの設定に関係なく）
+                    float extendedMinValue = info.minValue;
+                    float extendedMaxValue = info.maxValue;
+                    float extendedNewWeight = EditorGUILayout.Slider(blendShape.weight, extendedMinValue, extendedMaxValue);
+                    
+                    // 値の表示
+                    GUILayout.Label($"{extendedNewWeight:F1}", GUILayout.Width(50));
+                    
+                    if (!blendShape.isLocked && Mathf.Abs(extendedNewWeight - blendShape.weight) > 0.01f)
+                    {
+                        blendShape.weight = extendedNewWeight;
+                        
+                        // 拡張シェイプキーの場合は永続化マネージャーに情報を更新
+                        if (blendShape.isExtended)
+                        {
+                            var extendedInfoForUpdate = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
+                            ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForUpdate);
+                        }
+                        
+                        // 拡張シェイプキーの場合は直接メッシュに適用
+                        window.ApplyExtendedShapeKeyWeight(blendShape);
+                        
+                        // TreeViewを自動更新
+                        TreeViewPart.Reload();
+                    }
+                }
+                else
+                {
+                    // Maxボタン
+                    var maxButtonRect = GUILayoutUtility.GetRect(new GUIContent("Max"), GUI.skin.button, GUILayout.Width(40));
+                    bool isMaxButtonHovered = maxButtonRect.Contains(Event.current.mousePosition);
+                    
+                    // 拡張シェイプキーの場合は元のシェイプキーのインデックスを使用
+                    int targetIndex = blendShape.index;
+                    if (blendShape.isExtended && !string.IsNullOrEmpty(blendShape.originalName))
+                    {
+                        // 元のシェイプキーを探す
+                        var originalShape = window.blendShapes.FirstOrDefault(s => s.name == blendShape.originalName);
+                        if (originalShape != null)
+                        {
+                            targetIndex = originalShape.index;
+                        }
+                    }
+                    
+                    // インデックスが無効な場合はスキップ
+                    if (targetIndex < 0)
+                    {
+                        GUILayout.Label("無効", GUILayout.Width(50));
+                        return;
+                    }
+                    
+                    // マウスオーバーで100%プレビュー
+                    if (isMaxButtonHovered && !blendShape.isLocked && targetIndex >= 0)
+                    {
+                        // 元の値を保存（初回のみ）
+                        if (!window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
+                        {
+                            window.originalWeightsForMaxPreview[targetIndex] = blendShape.weight;
+                        }
+                        
+                        // 100%に設定
+                        if (Mathf.Abs(blendShape.weight - 100f) > 0.01f)
+                        {
+                            blendShape.weight = 100f;
+                            window.selectedRenderer.SetBlendShapeWeight(targetIndex, 100f);
+                            Utility.MarkRendererDirty(window.selectedRenderer);
+                            SceneView.RepaintAll();
+                        }
+                        
+                        // ボタンの色を変更してホバー状態を表示
+                        GUI.color = Color.yellow;
+                        
+                        // マウスオーバー中は継続的にRepaint
+                        window.Repaint();
+                    }
+                    else if (!isMaxButtonHovered && window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
+                    {
+                        // マウスが離れたら元の値に戻す
+                        float originalWeight = window.originalWeightsForMaxPreview[targetIndex];
+                        if (Mathf.Abs(blendShape.weight - 100f) < 0.01f) // 100%の時のみ戻す
+                        {
+                            blendShape.weight = originalWeight;
+                            window.selectedRenderer.SetBlendShapeWeight(targetIndex, originalWeight);
+                            Utility.MarkRendererDirty(window.selectedRenderer);
+                            SceneView.RepaintAll();
+                        }
+                        window.originalWeightsForMaxPreview.Remove(targetIndex);
+                    }
+                    
+                    // スライダーを描画（ホバー中は100%を表示）
+                    float displayWeight = isMaxButtonHovered && window.originalWeightsForMaxPreview.ContainsKey(targetIndex) ? 100f : blendShape.weight;
+                    float normalNewWeight = EditorGUILayout.Slider(displayWeight, 0f, 100f);
+                    
+                    // ボタンを描画
+                    if (GUI.Button(maxButtonRect, "Max"))
+                    {
+                        if (!blendShape.isLocked && targetIndex >= 0)
+                        {
+                            blendShape.weight = 100f;
+                            window.selectedRenderer.SetBlendShapeWeight(targetIndex, 100f);
+                            Utility.MarkRendererDirty(window.selectedRenderer);
+                            
+                            // 拡張シェイプキーが存在する場合は永続化マネージャーを更新
+                            if (blendShape.isExtended)
+                            {
+                                var extendedInfoForMax = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
+                                ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForMax);
+                            }
+                            
+                            SceneView.RepaintAll();
+                            TreeViewPart.Reload();
+                        }
+                    }
+                    
+                    // ボタンの色をリセット
+                    GUI.color = Color.white;
+                    
+                    // スライダーの値が変更された場合
+                    if (!blendShape.isLocked && Mathf.Abs(normalNewWeight - blendShape.weight) > 0.01f)
+                    {
+                        Utility.SetWeight(window, blendShape, normalNewWeight);
+                        Utility.MarkRendererDirty(window.selectedRenderer);
+                        
+                        // 拡張シェイプキーが存在する場合は永続化マネージャーを更新
+                        if (blendShape.isExtended)
+                        {
+                            var extendedInfoForSlider = new ExtendedShapeKeyInfo(blendShape.originalName, blendShape.minValue, blendShape.maxValue);
+                            ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForSlider);
+                        }
+                        
+                        // TreeViewを自動更新
+                        TreeViewPart.Reload();
+                    }
+                }
+            }
+            
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.EndHorizontal();
         }
     }
 } 
