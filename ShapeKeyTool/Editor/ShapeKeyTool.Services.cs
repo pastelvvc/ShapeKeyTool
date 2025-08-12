@@ -69,6 +69,68 @@ namespace ShapeKeyTools
             }
             Utility.MarkRendererDirty(window.selectedRenderer);
         }
+
+        /// <summary>
+        /// 拡張シェイプキー系の現在値を実メッシュに即時反映（Undoなし）。
+        /// GUIのスライダ操作など連続更新用。
+        /// </summary>
+        public static void ApplyExtendedWeightImmediate(ShapeKeyToolWindow window, BlendShape blendShape)
+        {
+            if (window?.selectedRenderer == null) return;
+            var mesh = window.selectedRenderer.sharedMesh;
+            if (mesh == null) return;
+
+            try
+            {
+                int extendedIndex = -1;
+                for (int i = 0; i < mesh.blendShapeCount; i++)
+                {
+                    if (mesh.GetBlendShapeName(i) == blendShape.name)
+                    {
+                        extendedIndex = i;
+                        break;
+                    }
+                }
+
+                if (extendedIndex != -1)
+                {
+                    float range = blendShape.maxValue - blendShape.minValue;
+                    float normalizedWeight = blendShape.weight;
+                    if (range > 0)
+                    {
+                        normalizedWeight = (blendShape.weight - blendShape.minValue) / range * 100f;
+                    }
+                    window.selectedRenderer.SetBlendShapeWeight(extendedIndex, normalizedWeight);
+                }
+                else
+                {
+                    int originalIndex = -1;
+                    for (int i = 0; i < mesh.blendShapeCount; i++)
+                    {
+                        if (mesh.GetBlendShapeName(i) == blendShape.originalName)
+                        {
+                            originalIndex = i;
+                            break;
+                        }
+                    }
+                    if (originalIndex != -1)
+                    {
+                        float range = blendShape.maxValue - blendShape.minValue;
+                        float normalizedWeight = blendShape.weight;
+                        if (range > 0)
+                        {
+                            normalizedWeight = (blendShape.weight - blendShape.minValue) / range * 100f;
+                        }
+                        window.selectedRenderer.SetBlendShapeWeight(originalIndex, normalizedWeight);
+                    }
+                }
+                Utility.MarkRendererDirty(window.selectedRenderer);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"BlendShapeLimitBreak: 拡張シェイプキーの重み適用でエラーが発生しました: {e.Message}");
+            }
+        }
     }
 
     /// <summary>

@@ -509,8 +509,8 @@ namespace ShapeKeyTools
                                             ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfo);
                                         }
                                         
-                                        // 拡張シェイプキーの場合は直接メッシュに適用
-                                        window.ApplyExtendedShapeKeyWeight(blendShape);
+                                        // 拡張シェイプキーの場合は直接メッシュに適用（サービス経由）
+                                        ShapeKeyCommandService.ApplyExtendedWeightImmediate(window, blendShape);
                                         
                                         // TreeViewを自動更新
                                         TreeViewPart.Reload();
@@ -561,8 +561,8 @@ namespace ShapeKeyTools
                                                 ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForUpdate);
                                             }
                                             
-                                            // 拡張シェイプキーの場合は直接メッシュに適用
-                                            window.ApplyExtendedShapeKeyWeight(blendShape);
+                                        // 拡張シェイプキーの場合は直接メッシュに適用（サービス経由）
+                                        ShapeKeyCommandService.ApplyExtendedWeightImmediate(window, blendShape);
                                             
                                             // TreeViewを自動更新
                                             TreeViewPart.Reload();
@@ -589,20 +589,7 @@ namespace ShapeKeyTools
                                         // マウスオーバーで100%プレビュー
                                         if (isMaxButtonHovered && !blendShape.isLocked && targetIndex >= 0)
                                         {
-                                            // 元の値を保存（初回のみ）
-                                            if (!window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
-                                            {
-                                                window.originalWeightsForMaxPreview[targetIndex] = blendShape.weight;
-                                            }
-                                            
-                                            // 100%に設定
-                                            if (Mathf.Abs(blendShape.weight - 100f) > 0.01f)
-                                            {
-                                                blendShape.weight = 100f;
-                                                window.selectedRenderer.SetBlendShapeWeight(targetIndex, 100f);
-                                                Utility.MarkRendererDirty(window.selectedRenderer);
-                                                SceneView.RepaintAll();
-                                            }
+                                            PreviewService.BeginMaxHover(window, blendShape, targetIndex);
                                             
                                             // ボタンの色を変更してホバー状態を表示
                                             GUI.color = Color.yellow;
@@ -612,16 +599,7 @@ namespace ShapeKeyTools
                                         }
                                         else if (!isMaxButtonHovered && window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
                                         {
-                                            // マウスが離れたら元の値に戻す
-                                            float originalWeight = window.originalWeightsForMaxPreview[targetIndex];
-                                            if (Mathf.Abs(blendShape.weight - 100f) < 0.01f) // 100%の時のみ戻す
-                                            {
-                                                blendShape.weight = originalWeight;
-                                                window.selectedRenderer.SetBlendShapeWeight(targetIndex, originalWeight);
-                                                Utility.MarkRendererDirty(window.selectedRenderer);
-                                                SceneView.RepaintAll();
-                                            }
-                                            window.originalWeightsForMaxPreview.Remove(targetIndex);
+                                            PreviewService.EndMaxHover(window, blendShape, targetIndex);
                                         }
                                         
                                         // スライダーを描画（ホバー中は100%を表示）
