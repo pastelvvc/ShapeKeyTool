@@ -608,37 +608,15 @@ namespace ShapeKeyTools
                     {
                         if (item.depth == 0)
                         {
-                            // グループ名の変更
+                            // グループ名の変更 → Commandへ移譲
                             string oldGroupName = item.displayName.Split('(')[0].Trim();
-                            if (tool.groupedShapes.ContainsKey(oldGroupName))
-                            {
-                                var shapes = tool.groupedShapes[oldGroupName];
-                                tool.groupedShapes.Remove(oldGroupName);
-                                tool.groupedShapes[renameText] = shapes;
-
-                                // foldoutの状態も移行
-                                if (tool.groupFoldouts.ContainsKey(oldGroupName))
-                                {
-                                    bool foldoutState = tool.groupFoldouts[oldGroupName];
-                                    tool.groupFoldouts.Remove(oldGroupName);
-                                    tool.groupFoldouts[renameText] = foldoutState;
-                                }
-                            }
+                            ShapeKeyCommandService.RenameGroupWithUndo(tool, oldGroupName, renameText);
                         }
                         else
                         {
-                            // シェイプキー名の変更
+                            // シェイプキー名の変更 → Commandへ移譲
                             string oldShapeName = item.displayName.Split('(')[0].Trim();
-
-                            foreach (var group in tool.groupedShapes)
-                            {
-                                var shape = group.Value.FirstOrDefault(s => s.name == oldShapeName);
-                                if (shape != null)
-                                {
-                                    shape.name = renameText;
-                                    break;
-                                }
-                            }
+                            ShapeKeyCommandService.RenameShapeWithUndo(tool, oldShapeName, renameText);
                         }
                     }
                 }

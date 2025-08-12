@@ -11,6 +11,52 @@ namespace ShapeKeyTools
     /// </summary>
     internal static class ShapeKeyCommandService
     {
+        public static void RenameGroupWithUndo(ShapeKeyToolWindow window, string oldGroupName, string newGroupName)
+        {
+            if (window == null || string.IsNullOrEmpty(oldGroupName) || string.IsNullOrEmpty(newGroupName)) return;
+            if (oldGroupName == newGroupName) return;
+            Undo.RecordObject(window.selectedRenderer, "Rename Group");
+            if (window.groupedShapes.ContainsKey(oldGroupName))
+            {
+                var shapes = window.groupedShapes[oldGroupName];
+                window.groupedShapes.Remove(oldGroupName);
+                window.groupedShapes[newGroupName] = shapes;
+            }
+            if (window.groupFoldouts.ContainsKey(oldGroupName))
+            {
+                bool state = window.groupFoldouts[oldGroupName];
+                window.groupFoldouts.Remove(oldGroupName);
+                window.groupFoldouts[newGroupName] = state;
+            }
+            if (window.groupTestSliders.ContainsKey(oldGroupName))
+            {
+                float v = window.groupTestSliders[oldGroupName];
+                window.groupTestSliders.Remove(oldGroupName);
+                window.groupTestSliders[newGroupName] = v;
+            }
+            window.RequestReload();
+            window.RequestRepaintThrottled();
+        }
+
+        public static void RenameShapeWithUndo(ShapeKeyToolWindow window, string oldShapeName, string newShapeName)
+        {
+            if (window == null || string.IsNullOrEmpty(oldShapeName) || string.IsNullOrEmpty(newShapeName)) return;
+            if (oldShapeName == newShapeName) return;
+            Undo.RecordObject(window.selectedRenderer, "Rename ShapeKey");
+            foreach (var group in window.groupedShapes)
+            {
+                foreach (var s in group.Value)
+                {
+                    if (s.name == oldShapeName)
+                    {
+                        s.name = newShapeName;
+                        break;
+                    }
+                }
+            }
+            window.RequestReload();
+            window.RequestRepaintThrottled();
+        }
         public static void CreateExtendedWithUndo(ShapeKeyToolWindow window, string originalName, int minValue, int maxValue)
         {
             if (window?.selectedRenderer == null) return;
