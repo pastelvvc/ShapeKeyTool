@@ -110,76 +110,76 @@ namespace ShapeKeyTools
 
             // ファイルメニュー（先頭）
             int newFileIndex = EditorGUILayout.Popup(
-                window.fileMenuIndex,
+                window.ui.fileMenuIndex,
                 window.fileMenuOptions,
                 GUILayout.Width(70)
             );
-            if (newFileIndex != window.fileMenuIndex)
+            if (newFileIndex != window.ui.fileMenuIndex)
             {
-                window.fileMenuIndex = newFileIndex;
-                switch (window.fileMenuIndex)
+                window.ui.fileMenuIndex = newFileIndex;
+                switch (window.ui.fileMenuIndex)
                 {
                     case 1: // 手動保存
                         window.ManualSave();
-                        window.fileMenuIndex = 0;
+                        window.ui.fileMenuIndex = 0;
                         break;
                     case 2: // 手動読み込み
                         window.ManualLoad();
-                        window.fileMenuIndex = 0;
+                        window.ui.fileMenuIndex = 0;
                         break;
                     case 3: // JSON エクスポート
                         Serialization.ExportJson(window);
-                        window.fileMenuIndex = 0;
+                        window.ui.fileMenuIndex = 0;
                         break;
                     case 4: // JSON インポート
                         Serialization.ImportJson(window);
-                        window.fileMenuIndex = 0;
+                        window.ui.fileMenuIndex = 0;
                         break;
                     case 5: // コンポーネントの削除
                         window.RemovePersistenceComponent();
-                        window.fileMenuIndex = 0;
+                        window.ui.fileMenuIndex = 0;
                         break;
                 }
             }
 
             // 表示メニュー
             int newDisplayIndex = EditorGUILayout.Popup(
-                window.displayMenuIndex,
+                window.ui.displayMenuIndex,
                 window.displayMenuOptions,
                 GUILayout.Width(60)
             );
-            if (newDisplayIndex != window.displayMenuIndex)
+            if (newDisplayIndex != window.ui.displayMenuIndex)
             {
-                window.displayMenuIndex = newDisplayIndex;
-                switch (window.displayMenuIndex)
+                window.ui.displayMenuIndex = newDisplayIndex;
+                switch (window.ui.displayMenuIndex)
                 {
                     case 1: // すべて開く
                         foreach (var group in window.groupedShapes)
                         {
                             window.groupFoldouts[group.Key] = true;
                         }
-                        window.displayMenuIndex = 0;
+                        window.ui.displayMenuIndex = 0;
                         break;
                     case 2: // すべて閉じる
                         foreach (var group in window.groupedShapes)
                         {
                             window.groupFoldouts[group.Key] = false;
                         }
-                        window.displayMenuIndex = 0;
+                        window.ui.displayMenuIndex = 0;
                         break;
                 }
             }
 
             // 操作メニュー
             int newOperationIndex = EditorGUILayout.Popup(
-                window.operationMenuIndex,
+                window.ui.operationMenuIndex,
                 window.operationMenuOptions,
                 GUILayout.Width(60)
             );
-            if (newOperationIndex != window.operationMenuIndex)
+            if (newOperationIndex != window.ui.operationMenuIndex)
             {
-                window.operationMenuIndex = newOperationIndex;
-                switch (window.operationMenuIndex)
+                window.ui.operationMenuIndex = newOperationIndex;
+                switch (window.ui.operationMenuIndex)
                 {
                     case 1: // ランダム設定
                         foreach (var group in window.groupedShapes)
@@ -190,7 +190,7 @@ namespace ShapeKeyTools
                                 ShapeKeyCommandService.SetBlendShapeWeightWithUndo(window, shape, randomWeight);
                             }
                         }
-                        window.operationMenuIndex = 0;
+                        window.ui.operationMenuIndex = 0;
                         break;
                     case 2: // すべてロック
                         foreach (var group in window.groupedShapes)
@@ -198,7 +198,7 @@ namespace ShapeKeyTools
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, true);
                         }
                         window.RequestReload();
-                        window.operationMenuIndex = 0;
+                        window.ui.operationMenuIndex = 0;
                         break;
                     case 3: // すべてアンロック
                         foreach (var group in window.groupedShapes)
@@ -206,7 +206,7 @@ namespace ShapeKeyTools
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, false);
                         }
                         window.RequestReload();
-                        window.operationMenuIndex = 0;
+                        window.ui.operationMenuIndex = 0;
                         break;
                     case 4: // すべてリセット
                         foreach (var group in window.groupedShapes)
@@ -220,21 +220,21 @@ namespace ShapeKeyTools
                         break;
                     case 5: // 初期化:TreeViewの操作
                         window.InitializeTreeViewOperations();
-                        window.operationMenuIndex = 0;
+                        window.ui.operationMenuIndex = 0;
                         break;
                 }
             }
 
             // シェイプキーメニュー
             int newShapeKeyIndex = EditorGUILayout.Popup(
-                window.shapeKeyMenuIndex,
+                window.ui.shapeKeyMenuIndex,
                 window.shapeKeyMenuOptions,
                 GUILayout.Width(80)
             );
-            if (newShapeKeyIndex != window.shapeKeyMenuIndex)
+            if (newShapeKeyIndex != window.ui.shapeKeyMenuIndex)
             {
-                window.shapeKeyMenuIndex = newShapeKeyIndex;
-                switch (window.shapeKeyMenuIndex)
+                window.ui.shapeKeyMenuIndex = newShapeKeyIndex;
+                switch (window.ui.shapeKeyMenuIndex)
                 {
                     case 1: // すべてロック
                         foreach (var group in window.groupedShapes)
@@ -242,7 +242,7 @@ namespace ShapeKeyTools
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, true);
                         }
                         window.RequestReload();
-                        window.shapeKeyMenuIndex = 0;
+                        window.ui.shapeKeyMenuIndex = 0;
                         break;
                     case 2: // すべて解除
                         foreach (var group in window.groupedShapes)
@@ -250,7 +250,7 @@ namespace ShapeKeyTools
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, false);
                         }
                         window.RequestReload();
-                        window.shapeKeyMenuIndex = 0;
+                        window.ui.shapeKeyMenuIndex = 0;
                         break;
                     case 3: // 値が入っているものをロックする
                         foreach (var group in window.groupedShapes)
@@ -266,7 +266,7 @@ namespace ShapeKeyTools
                         }
                         EditorUtility.SetDirty(window.selectedRenderer);
                         window.RequestReload();
-                        window.shapeKeyMenuIndex = 0;
+                        window.ui.shapeKeyMenuIndex = 0;
                         break;
                     case 4: // 拡張シェイプキーを一括削除
                         window.DeleteAllExtendedShapeKeys();
@@ -274,7 +274,7 @@ namespace ShapeKeyTools
                         break;
                     case 5: // TreeViewをリセットする
                         window.ResetTreeView();
-                        window.shapeKeyMenuIndex = 0;
+                        window.ui.shapeKeyMenuIndex = 0;
                         break;
                 }
             }
@@ -321,14 +321,14 @@ namespace ShapeKeyTools
                 window.scrollPosition = EditorGUILayout.BeginScrollView(window.scrollPosition);
 
                 // ジャンプ機能の処理
-                if (window.jumpToGroup != null && window.needScrollToGroup)
+                if (window.ui.jumpToGroup != null && window.ui.needScrollToGroup)
                 {
                     float targetY = 0f;
                     bool found = false;
 
                     foreach (var group in window.groupedShapes)
                     {
-                        if (group.Key == window.jumpToGroup)
+                        if (group.Key == window.ui.jumpToGroup)
                         {
                             found = true;
                             break;
@@ -345,8 +345,8 @@ namespace ShapeKeyTools
                         window.scrollPosition.y = targetY;
                     }
 
-                    window.jumpToGroup = null;
-                    window.needScrollToGroup = false;
+                    window.ui.jumpToGroup = null;
+                    window.ui.needScrollToGroup = false;
                 }
 
                 foreach (var group in window.groupedShapes)

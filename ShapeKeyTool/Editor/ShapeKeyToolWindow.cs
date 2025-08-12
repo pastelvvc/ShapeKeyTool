@@ -46,12 +46,8 @@ namespace ShapeKeyTools
         // 現在のグループ名を追跡
         internal string currentGroup = "その他";
 
-        // メニュー用の変数
-        internal int fileMenuIndex = 0;
-        internal int displayMenuIndex = 0;
-        internal int operationMenuIndex = 0;
-        internal int shapeKeyMenuIndex = 0;
-        internal int optionMenuIndex = 0;
+        // メニュー用の変数 → UIStateに集約
+        internal UIState ui = new UIState();
 
         internal GUIContent[] fileMenuOptions = new GUIContent[]
         {
@@ -93,15 +89,12 @@ namespace ShapeKeyTools
             new GUIContent("詳細デバッグログを有効化")
         };
 
-        // ジャンプ機能用の変数
-        internal string jumpToGroup = null; // ジャンプ先のグループ名
-        internal bool needScrollToGroup = false; // スクロールが必要かどうかのフラグ
+        // ジャンプ機能用の変数 → UIStateに集約
 
         // 現在のグループ表示用の変数
         internal string currentGroupDisplay = "";
 
-        // Foldoutの状態を保持するフィールド
-        internal bool treeViewFoldout = true;
+        // Foldoutの状態を保持 → UIStateに集約
 
         // オプション用のチェックボックス
         internal bool option1Enabled = false;
