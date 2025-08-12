@@ -25,16 +25,17 @@ namespace ShapeKeyTools
 
 
         // 他ファイル側と共有したいものは internal/protected に
-        internal Dictionary<string, List<BlendShape>> groupedShapes = new();
-        internal Dictionary<string, bool> groupFoldouts = new();
-        internal Dictionary<string, float> groupTestSliders = new();
-        internal Dictionary<int, bool> lockedShapeKeys = new();
+        internal ShapeKeyViewModel viewModel = new ShapeKeyViewModel();
+        internal Dictionary<string, List<BlendShape>> groupedShapes => viewModel.groupedShapes;
+        internal Dictionary<string, bool> groupFoldouts => viewModel.groupFoldouts;
+        internal Dictionary<string, float> groupTestSliders => viewModel.groupTestSliders;
+        internal Dictionary<int, bool> lockedShapeKeys => viewModel.lockedShapeKeys;
 
         // グループごとに「初期 weight」を保持
-        internal Dictionary<string, Dictionary<int, float>> originalWeights = new();
+        internal Dictionary<string, Dictionary<int, float>> originalWeights => viewModel.originalWeights;
 
-        // 高速探査で値が入っているものをスキップするか
-        internal bool skipNonZeroValues = true;
+        // 高速探査で値が入っているものをスキップするか（Settingsがソースオブトゥルース）
+        internal bool skipNonZeroValues => ShapeKeyToolSettings.SkipNonZeroValues;
 
         // 拡張シェイプキーの適用設定
 
@@ -125,7 +126,6 @@ namespace ShapeKeyTools
             
             // 共通設定を初期化
             ShapeKeyToolSettings.Initialize();
-            skipNonZeroValues = ShapeKeyToolSettings.SkipNonZeroValues;
             
             UpdateSelectedObject();
             TreeViewPart.Init(this); // TreeView.cs
@@ -617,8 +617,7 @@ namespace ShapeKeyTools
                 skipNonZeroValues,
                 () =>
                 {
-                    skipNonZeroValues = !skipNonZeroValues;
-                    ShapeKeyToolSettings.SkipNonZeroValues = skipNonZeroValues;
+                    ShapeKeyToolSettings.SkipNonZeroValues = !ShapeKeyToolSettings.SkipNonZeroValues;
                 }
             );
 
@@ -941,7 +940,7 @@ namespace ShapeKeyTools
                 currentGroupDisplay = "";
 
                 // オプションをリセット
-                skipNonZeroValues = false;
+                ShapeKeyToolSettings.SkipNonZeroValues = false;
                 option1Enabled = false;
                 option2Enabled = false;
                 option3Enabled = false;
