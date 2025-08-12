@@ -11,6 +11,28 @@ namespace ShapeKeyTools
     /// </summary>
     internal static class ShapeKeyCommandService
     {
+        public static void CreateExtendedWithUndo(ShapeKeyToolWindow window, string originalName, int minValue, int maxValue)
+        {
+            if (window?.selectedRenderer == null) return;
+            string extendedName = $"{originalName}_min:{minValue}_max:{maxValue}";
+
+            Undo.RegisterCompleteObjectUndo(window.selectedRenderer, "Create Extended ShapeKey");
+            bool ok = BlendShapeOps.CreateExtended(window.selectedRenderer, extendedName, originalName, minValue, maxValue);
+            if (ok)
+            {
+                Utility.MarkRendererDirty(window.selectedRenderer);
+            }
+        }
+
+        public static void RemoveShapeKeyWithUndo(ShapeKeyToolWindow window, string shapeKeyName)
+        {
+            if (window?.selectedRenderer == null) return;
+            Undo.RegisterCompleteObjectUndo(window.selectedRenderer, "Remove ShapeKey");
+            if (BlendShapeOps.RemoveOne(window.selectedRenderer, shapeKeyName))
+            {
+                Utility.MarkRendererDirty(window.selectedRenderer);
+            }
+        }
         public static void ToggleLockWithUndo(ShapeKeyToolWindow window, BlendShape shape, bool isLocked)
         {
             if (shape == null || window == null) return;
