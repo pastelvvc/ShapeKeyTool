@@ -927,16 +927,16 @@ namespace ShapeKeyTools
                     TreeViewPart.GetTreeViewState().expandedIDs.Clear();
                 }
 
-                // メニューインデックスをリセット
-                fileMenuIndex = 0;
-                displayMenuIndex = 0;
-                operationMenuIndex = 0;
-                shapeKeyMenuIndex = 0;
-                optionMenuIndex = 0;
+                // メニューインデックスをリセット（UIState）
+                ui.fileMenuIndex = 0;
+                ui.displayMenuIndex = 0;
+                ui.operationMenuIndex = 0;
+                ui.shapeKeyMenuIndex = 0;
+                ui.optionMenuIndex = 0;
 
-                // ジャンプ機能をリセット
-                jumpToGroup = null;
-                needScrollToGroup = false;
+                // ジャンプ機能をリセット（UIState）
+                ui.jumpToGroup = null;
+                ui.needScrollToGroup = false;
                 currentGroupDisplay = "";
 
                 // オプションをリセット

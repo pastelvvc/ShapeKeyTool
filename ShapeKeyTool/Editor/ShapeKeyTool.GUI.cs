@@ -216,7 +216,7 @@ namespace ShapeKeyTools
                                 ShapeKeyCommandService.SetBlendShapeWeightWithUndo(window, shape, 0f);
                             }
                         }
-                        window.operationMenuIndex = 0;
+                        window.ui.operationMenuIndex = 0;
                         break;
                     case 5: // 初期化:TreeViewの操作
                         window.InitializeTreeViewOperations();
@@ -270,7 +270,7 @@ namespace ShapeKeyTools
                         break;
                     case 4: // 拡張シェイプキーを一括削除
                         window.DeleteAllExtendedShapeKeys();
-                        window.shapeKeyMenuIndex = 0;
+                        window.ui.shapeKeyMenuIndex = 0;
                         break;
                     case 5: // TreeViewをリセットする
                         window.ResetTreeView();
