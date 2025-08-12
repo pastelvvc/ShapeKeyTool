@@ -1,0 +1,7 @@
+{
+  "$schema": "https://raw.githubusercontent.com/csharpier-org/csharpier/main/schema.json",
+  "indentSize": 4,
+  "printWidth": 120,
+  "useTabs": false
+}
+
