@@ -360,8 +360,8 @@ namespace ShapeKeyTools
                     tool.groupTestSliders[kv.Key] = kv.Value;
                 }
 
-                // TreeViewを更新
-                TreeViewPart.Reload();
+                // TreeViewを更新（スロットリング経由）
+                tool.RequestReload();
             }
 
             private void MoveShapeKeyToEnd(string shapeName)
@@ -433,8 +433,8 @@ namespace ShapeKeyTools
                     tool.groupTestSliders[kv.Key] = kv.Value;
                 }
 
-                // TreeViewを更新
-                TreeViewPart.Reload();
+                // TreeViewを更新（スロットリング経由）
+                tool.RequestReload();
             }
 
             private void MoveShapeKeyToGroup(string shapeName, string targetGroup)
