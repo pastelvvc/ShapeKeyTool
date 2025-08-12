@@ -42,6 +42,18 @@ namespace ShapeKeyTools
             }
         }
 
+        public static void SetBlendShapeWeightImmediate(ShapeKeyToolWindow window, BlendShape shape, float weight)
+        {
+            if (shape == null || window?.selectedRenderer == null) return;
+            if (shape.isLocked) return;
+            shape.weight = weight;
+            if (shape.index >= 0)
+            {
+                window.selectedRenderer.SetBlendShapeWeight(shape.index, weight);
+                Utility.MarkRendererDirty(window.selectedRenderer);
+            }
+        }
+
         public static void SetMultipleLockStatesWithUndo(ShapeKeyToolWindow window, IEnumerable<BlendShape> shapes, bool isLocked)
         {
             if (window?.selectedRenderer == null) return;
@@ -56,6 +68,40 @@ namespace ShapeKeyTools
                 }
             }
             Utility.MarkRendererDirty(window.selectedRenderer);
+        }
+    }
+
+    /// <summary>
+    /// Maxプレビューホバーなど、短期的な一時適用（Undoなし）を担当。
+    /// </summary>
+    internal static class PreviewService
+    {
+        public static void BeginMaxHover(ShapeKeyToolWindow window, BlendShape blendShape, int targetIndex)
+        {
+            if (window == null || window.selectedRenderer == null) return;
+            if (blendShape.isLocked || targetIndex < 0) return;
+
+            if (!window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
+            {
+                window.originalWeightsForMaxPreview[targetIndex] = blendShape.weight;
+            }
+            window.selectedRenderer.SetBlendShapeWeight(targetIndex, 100f);
+            Utility.MarkRendererDirty(window.selectedRenderer);
+            window.RequestSceneRepaint();
+        }
+
+        public static void EndMaxHover(ShapeKeyToolWindow window, BlendShape blendShape, int targetIndex)
+        {
+            if (window == null || window.selectedRenderer == null) return;
+            if (targetIndex < 0) return;
+
+            if (window.originalWeightsForMaxPreview.TryGetValue(targetIndex, out var originalWeight))
+            {
+                window.selectedRenderer.SetBlendShapeWeight(targetIndex, originalWeight);
+                Utility.MarkRendererDirty(window.selectedRenderer);
+                window.originalWeightsForMaxPreview.Remove(targetIndex);
+                window.RequestSceneRepaint();
+            }
         }
     }
 

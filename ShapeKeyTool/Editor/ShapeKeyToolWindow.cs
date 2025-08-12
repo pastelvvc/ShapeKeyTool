@@ -153,6 +153,11 @@ namespace ShapeKeyTools
             gui.OnGUI();
         }
 
+        // UIUpdateDispatcherへの簡易アクセサ（GUI等から呼べるように）
+        internal void RequestReload() => uiUpdates?.RequestReload();
+        internal void RequestRepaintThrottled() => uiUpdates?.RequestRepaint();
+        internal void RequestSceneRepaint() => uiUpdates?.RequestSceneRepaint();
+
         #region --- 2画面パネル ---
 
         private void DrawCenterPanel(Rect r)
