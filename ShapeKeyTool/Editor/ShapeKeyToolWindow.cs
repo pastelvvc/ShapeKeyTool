@@ -111,6 +111,7 @@ namespace ShapeKeyTools
         // 3画面構成用のパネル
         internal CenterPane centerPane;
         private ShapeKeyToolGUI gui;
+        private UIUpdateDispatcher uiUpdates;
 
         [MenuItem("OpenTool/ShapeKey")]
         private static void ShowWindow()
@@ -133,6 +134,7 @@ namespace ShapeKeyTools
             // 3画面構成用のパネルを初期化
             centerPane = new CenterPane(this);
             gui = new ShapeKeyToolGUI(this);
+            uiUpdates = new UIUpdateDispatcher(this);
             
             // 自動読み込みを削除 - 手動で読み込みを行う
             

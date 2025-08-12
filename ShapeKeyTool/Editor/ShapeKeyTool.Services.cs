@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEditor.SceneManagement;
 
 namespace ShapeKeyTools
 {
@@ -10,6 +11,18 @@ namespace ShapeKeyTools
     /// </summary>
     internal static class ShapeKeyCommandService
     {
+        public static void ToggleLockWithUndo(ShapeKeyToolWindow window, BlendShape shape, bool isLocked)
+        {
+            if (shape == null || window == null) return;
+            Undo.RecordObject(window.selectedRenderer, isLocked ? "Lock Shape" : "Unlock Shape");
+            shape.isLocked = isLocked;
+            if (shape.index >= 0)
+            {
+                window.lockedShapeKeys[shape.index] = isLocked;
+            }
+            Utility.MarkRendererDirty(window.selectedRenderer);
+        }
+
         public static void SetBlendShapeWeightWithUndo(ShapeKeyToolWindow window, BlendShape shape, float weight)
         {
             if (shape == null || window?.selectedRenderer == null) return;
@@ -57,6 +70,7 @@ namespace ShapeKeyTools
         private double lastApplied;
         private bool needReload;
         private bool needRepaint;
+        private bool needSceneRepaint;
 
         public UIUpdateDispatcher(ShapeKeyToolWindow w, float minIntervalSec = 0.05f)
         {
@@ -76,6 +90,11 @@ namespace ShapeKeyTools
             needRepaint = true;
         }
 
+        public void RequestSceneRepaint()
+        {
+            needSceneRepaint = true;
+        }
+
         private void OnUpdate()
         {
             double now = EditorApplication.timeSinceStartup;
@@ -91,6 +110,11 @@ namespace ShapeKeyTools
             {
                 window.Repaint();
                 needRepaint = false;
+            }
+            if (needSceneRepaint)
+            {
+                SceneView.RepaintAll();
+                needSceneRepaint = false;
             }
         }
     }

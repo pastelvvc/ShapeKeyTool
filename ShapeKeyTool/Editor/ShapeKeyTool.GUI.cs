@@ -58,6 +58,7 @@ namespace ShapeKeyTools
             if (newSearchText != SearchManager.shapeKeySearchText)
             {
                 SearchManager.shapeKeySearchText = newSearchText;
+                // TODO: integrate UIUpdateDispatcher to throttle
                 window.Repaint();
             }
             
@@ -65,6 +66,7 @@ namespace ShapeKeyTools
             if (GUILayout.Button("クリア", GUILayout.Width(50)))
             {
                 SearchManager.shapeKeySearchText = "";
+                // TODO: integrate UIUpdateDispatcher to throttle
                 window.Repaint();
             }
             EditorGUILayout.EndHorizontal();
@@ -438,10 +440,7 @@ namespace ShapeKeyTools
                                 );
                                 if (newLocked != blendShape.isLocked)
                                 {
-                                    blendShape.isLocked = newLocked;
-                                    window.lockedShapeKeys[blendShape.index] = newLocked;
-                                    
-                                    // 自動保存を削除 - 手動で保存を行う
+                                    ShapeKeyCommandService.ToggleLockWithUndo(window, blendShape, newLocked);
                                 }
 
                                 // ロックボタンと名前の間に間隔を追加
