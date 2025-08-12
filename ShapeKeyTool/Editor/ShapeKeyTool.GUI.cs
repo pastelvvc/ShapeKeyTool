@@ -59,7 +59,7 @@ namespace ShapeKeyTools
             {
                 SearchManager.shapeKeySearchText = newSearchText;
                 // TODO: integrate UIUpdateDispatcher to throttle
-                window.Repaint();
+                window.RequestRepaintThrottled();
             }
             
             // クリアボタン
@@ -67,7 +67,7 @@ namespace ShapeKeyTools
             {
                 SearchManager.shapeKeySearchText = "";
                 // TODO: integrate UIUpdateDispatcher to throttle
-                window.Repaint();
+                window.RequestRepaintThrottled();
             }
             EditorGUILayout.EndHorizontal();
             
@@ -197,7 +197,7 @@ namespace ShapeKeyTools
                         {
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, true);
                         }
-                        TreeViewPart.Reload();
+                        window.RequestReload();
                         window.operationMenuIndex = 0;
                         break;
                     case 3: // すべてアンロック
@@ -205,7 +205,7 @@ namespace ShapeKeyTools
                         {
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, false);
                         }
-                        TreeViewPart.Reload();
+                        window.RequestReload();
                         window.operationMenuIndex = 0;
                         break;
                     case 4: // すべてリセット
@@ -241,7 +241,7 @@ namespace ShapeKeyTools
                         {
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, true);
                         }
-                        TreeViewPart.Reload();
+                        window.RequestReload();
                         window.shapeKeyMenuIndex = 0;
                         break;
                     case 2: // すべて解除
@@ -249,7 +249,7 @@ namespace ShapeKeyTools
                         {
                             ShapeKeyCommandService.SetMultipleLockStatesWithUndo(window, group.Value, false);
                         }
-                        TreeViewPart.Reload();
+                        window.RequestReload();
                         window.shapeKeyMenuIndex = 0;
                         break;
                     case 3: // 値が入っているものをロックする
@@ -265,7 +265,7 @@ namespace ShapeKeyTools
                             }
                         }
                         EditorUtility.SetDirty(window.selectedRenderer);
-                        TreeViewPart.Reload();
+                        window.RequestReload();
                         window.shapeKeyMenuIndex = 0;
                         break;
                     case 4: // 拡張シェイプキーを一括削除
@@ -513,7 +513,7 @@ namespace ShapeKeyTools
                                         ShapeKeyCommandService.ApplyExtendedWeightImmediate(window, blendShape);
                                         
                                         // TreeViewを自動更新
-                                        TreeViewPart.Reload();
+                                        window.RequestReload();
                                     }
                                 }
                                 else
@@ -565,7 +565,7 @@ namespace ShapeKeyTools
                                         ShapeKeyCommandService.ApplyExtendedWeightImmediate(window, blendShape);
                                             
                                             // TreeViewを自動更新
-                                            TreeViewPart.Reload();
+                                            window.RequestReload();
                                         }
                                     }
                                     else
@@ -595,7 +595,7 @@ namespace ShapeKeyTools
                                             GUI.color = Color.yellow;
                                             
                                             // マウスオーバー中は継続的にRepaint
-                                            window.Repaint();
+                                            window.RequestRepaintThrottled();
                                         }
                                         else if (!isMaxButtonHovered && window.originalWeightsForMaxPreview.ContainsKey(targetIndex))
                                         {
@@ -622,8 +622,8 @@ namespace ShapeKeyTools
                                                     ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForMax);
                                                 }
                                                 
-                                                SceneView.RepaintAll();
-                                                TreeViewPart.Reload();
+                                                window.RequestSceneRepaint();
+                                                window.RequestReload();
                                             }
                                         }
                                         
@@ -642,8 +642,8 @@ namespace ShapeKeyTools
                                                 ExtendedShapeKeyManager.RegisterExtendedShapeKey(blendShape.name, extendedInfoForSlider);
                                             }
                                             
-                                            // TreeViewを自動更新
-                                            TreeViewPart.Reload();
+                                             // TreeViewを自動更新
+                                             window.RequestReload();
                                         }
                                     }
                                 }
