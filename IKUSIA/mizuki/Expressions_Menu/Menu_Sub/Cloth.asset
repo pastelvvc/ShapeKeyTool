@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -340790334, guid: 67cc4cb7839cd3741b63733d5adf0442, type: 3}
+  m_Name: Cloth
+  m_EditorClassIdentifier: 
+  controls:
+  - name: Cloth1
+    icon: {fileID: 2800000, guid: a723cabb0fd3c0d43bcba468562a9113, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Cloth2
+    icon: {fileID: 2800000, guid: 66d1d872c22d844469d80caf8b72a315, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 2
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Cloth3
+    icon: {fileID: 2800000, guid: 48ab1c23e65017f4b88a189df6d464f8, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 3
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Cloth4
+    icon: {fileID: 2800000, guid: 2b99f1f0731bb92429ef5d1d854e737f, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 4
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Cloth5
+    icon: {fileID: 2800000, guid: 4a72b3effc8467141aab55c322f7db33, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 5
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Cloth6
+    icon: {fileID: 2800000, guid: 4e33f092e92661641a46e5c514bc1bf2, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 6
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Cloth7
+    icon: {fileID: 2800000, guid: 88c17d4c922f7cd4e9be6fcc5d36ce5e, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 7
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Cloth8
+    icon: {fileID: 2800000, guid: 0d601b04e2b5afc46ba4a8834f3c0ab7, type: 3}
+    type: 102
+    parameter:
+      name: Cloth
+    value: 8
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []

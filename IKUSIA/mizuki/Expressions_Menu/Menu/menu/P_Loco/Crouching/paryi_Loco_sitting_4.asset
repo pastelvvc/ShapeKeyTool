@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -340790334, guid: 67cc4cb7839cd3741b63733d5adf0442, type: 3}
+  m_Name: paryi_Loco_sitting_4
+  m_EditorClassIdentifier: 
+  controls:
+  - name: Mirror
+    icon: {fileID: 2800000, guid: 02644811094fc1d46be0eb1851b086aa, type: 3}
+    type: 102
+    parameter:
+      name: Mirror
+    value: 1
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Crouching19
+    icon: {fileID: 2800000, guid: f90c7b111f08fab4fb798abc6c5370a1, type: 3}
+    type: 102
+    parameter:
+      name: paryi_chang_Loco
+    value: 0.25
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Crouching20
+    icon: {fileID: 2800000, guid: d748ced37eefe8d4691704c19c4ab2f9, type: 3}
+    type: 102
+    parameter:
+      name: paryi_chang_Loco
+    value: 0.26
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Crouching21
+    icon: {fileID: 2800000, guid: c4c8986d67ec5c04a906480423d9d7a2, type: 3}
+    type: 102
+    parameter:
+      name: paryi_chang_Loco
+    value: 0.27
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Crouching22
+    icon: {fileID: 2800000, guid: d701109062661764893317937da8c216, type: 3}
+    type: 102
+    parameter:
+      name: paryi_chang_Loco
+    value: 0.44
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Crouching23
+    icon: {fileID: 2800000, guid: e56742568eb085446a74d7cb4b48012f, type: 3}
+    type: 102
+    parameter:
+      name: paryi_chang_Loco
+    value: 0.45
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
+  - name: Crouching24
+    icon: {fileID: 2800000, guid: ce1ee3a3701304146aae6af35e5fa2c1, type: 3}
+    type: 102
+    parameter:
+      name: paryi_chang_Loco
+    value: 0.46
+    style: 0
+    subMenu: {fileID: 0}
+    subParameters: []
+    labels: []
