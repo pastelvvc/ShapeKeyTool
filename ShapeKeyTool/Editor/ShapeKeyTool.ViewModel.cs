@@ -3,30 +3,29 @@ using UnityEngine;
 
 namespace ShapeKeyTools
 {
-    /// <summary>
-    /// 集中状態管理(ViewModel)。UIは読み取り、操作はサービス/コマンド経由で更新。
-    /// </summary>
-    internal class ShapeKeyViewModel
-    {
-        public Dictionary<string, List<BlendShape>> groupedShapes = new();
-        public Dictionary<string, bool> groupFoldouts = new();
-        public Dictionary<string, float> groupTestSliders = new();
-        public Dictionary<int, bool> lockedShapeKeys = new();
-        public Dictionary<string, Dictionary<int, float>> originalWeights = new();
-        public Vector2 scrollPosition;
-        public string currentGroupDisplay = "";
+	/// <summary>
+	/// UI状態の単一ソース(ViewModel)
+	/// </summary>
+	internal class ShapeKeyViewModel
+	{
+		public Dictionary<string, List<BlendShape>> GroupedShapes { get; set; } = new Dictionary<string, List<BlendShape>>();
+		public Dictionary<string, bool> GroupFoldouts { get; set; } = new Dictionary<string, bool>();
 
-        public void Clear()
-        {
-            groupedShapes.Clear();
-            groupFoldouts.Clear();
-            groupTestSliders.Clear();
-            lockedShapeKeys.Clear();
-            originalWeights.Clear();
-            scrollPosition = Vector2.zero;
-            currentGroupDisplay = "";
-        }
-    }
+		public Dictionary<string, float> GroupTestSliders { get; set; } = new Dictionary<string, float>();
+		public Dictionary<int, bool> LockedShapeKeys { get; set; } = new Dictionary<int, bool>();
+		public Dictionary<string, Dictionary<int, float>> OriginalWeights { get; set; } = new Dictionary<string, Dictionary<int, float>>();
+		// 高速探査の直近選択（グループごと）
+		public Dictionary<string, string> LastTestSelectedShapeName { get; set; } = new Dictionary<string, string>();
+		// 高速探査中にユーザーが手動で変更したシェイプ（名前ベース）
+		public Dictionary<string, HashSet<string>> UserEditedDuringTest { get; set; } = new Dictionary<string, HashSet<string>>();
+
+		public Vector2 ScrollPosition { get; set; } = Vector2.zero;
+		public string CurrentGroupDisplay { get; set; } = "";
+
+		// Policy: expand groups while searching
+		public bool ForceExpandOnSearch { get; set; } = true;
+	}
 }
+
 
 
