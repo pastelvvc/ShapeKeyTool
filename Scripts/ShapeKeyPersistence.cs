@@ -33,6 +33,8 @@ namespace ShapeKeyTools
         [SerializeField] private Dictionary<string, bool> groupFoldouts = new Dictionary<string, bool>();
         [SerializeField] private Dictionary<string, float> groupTestSliders = new Dictionary<string, float>();
         [SerializeField] private Dictionary<int, bool> lockedShapeKeys = new Dictionary<int, bool>();
+        [SerializeField] private Dictionary<string, string> userRenamedShapes = new Dictionary<string, string>();
+        [SerializeField] private Dictionary<string, string> userRenamedGroups = new Dictionary<string, string>();
 
         /// <summary>
         /// グループデータを取得
@@ -97,6 +99,38 @@ namespace ShapeKeyTools
         {
             lockedShapeKeys = locked ?? new Dictionary<int, bool>();
         }
+        
+        /// <summary>
+        /// ユーザーが変更したシェイプキー名を取得
+        /// </summary>
+        public Dictionary<string, string> GetUserRenamedShapes()
+        {
+            return userRenamedShapes ?? new Dictionary<string, string>();
+        }
+        
+        /// <summary>
+        /// ユーザーが変更したシェイプキー名を設定
+        /// </summary>
+        public void SetUserRenamedShapes(Dictionary<string, string> renamed)
+        {
+            userRenamedShapes = renamed ?? new Dictionary<string, string>();
+        }
+        
+        /// <summary>
+        /// ユーザーが変更したグループ名を取得
+        /// </summary>
+        public Dictionary<string, string> GetUserRenamedGroups()
+        {
+            return userRenamedGroups ?? new Dictionary<string, string>();
+        }
+        
+        /// <summary>
+        /// ユーザーが変更したグループ名を設定
+        /// </summary>
+        public void SetUserRenamedGroups(Dictionary<string, string> renamed)
+        {
+            userRenamedGroups = renamed ?? new Dictionary<string, string>();
+        }
 
         /// <summary>
         /// データをクリア
@@ -107,6 +141,8 @@ namespace ShapeKeyTools
             groupFoldouts.Clear();
             groupTestSliders.Clear();
             lockedShapeKeys.Clear();
+            userRenamedShapes.Clear();
+            userRenamedGroups.Clear();
         }
 
         /// <summary>

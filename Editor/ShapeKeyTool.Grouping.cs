@@ -9,7 +9,55 @@ namespace ShapeKeyTools
         internal void GroupShapes()
         {
             var result = GroupingEngine.ComputeGroups(blendShapes, viewModel.GroupedShapes, new ByHeaderPatternStrategy());
+            
+            // ユーザーが変更したグループ名を適用
+            ApplyUserRenamedGroups(result);
+            
             viewModel.GroupedShapes = result;
+        }
+        
+        /// <summary>
+        /// ユーザーが変更したグループ名を適用
+        /// </summary>
+        private void ApplyUserRenamedGroups(Dictionary<string, List<BlendShape>> groupedShapes)
+        {
+            if (viewModel.UserRenamedGroups == null || viewModel.UserRenamedGroups.Count == 0)
+                return;
+                
+            // ユーザーが変更したグループ名を適用
+            foreach (var renameInfo in viewModel.UserRenamedGroups)
+            {
+                string originalGroupName = renameInfo.Key;
+                string newGroupName = renameInfo.Value;
+                
+                // 元のグループ名が存在し、新しいグループ名が存在しない場合
+                if (groupedShapes.ContainsKey(originalGroupName) && !groupedShapes.ContainsKey(newGroupName))
+                {
+                    // グループ名を変更
+                    var shapes = groupedShapes[originalGroupName];
+                    groupedShapes.Remove(originalGroupName);
+                    groupedShapes[newGroupName] = shapes;
+                    
+                    // 関連する状態も移行
+                    if (viewModel.GroupFoldouts.ContainsKey(originalGroupName))
+                    {
+                        viewModel.GroupFoldouts[newGroupName] = viewModel.GroupFoldouts[originalGroupName];
+                        viewModel.GroupFoldouts.Remove(originalGroupName);
+                    }
+                    
+                    if (viewModel.GroupTestSliders.ContainsKey(originalGroupName))
+                    {
+                        viewModel.GroupTestSliders[newGroupName] = viewModel.GroupTestSliders[originalGroupName];
+                        viewModel.GroupTestSliders.Remove(originalGroupName);
+                    }
+                    
+                    if (viewModel.OriginalWeights.ContainsKey(originalGroupName))
+                    {
+                        viewModel.OriginalWeights[newGroupName] = viewModel.OriginalWeights[originalGroupName];
+                        viewModel.OriginalWeights.Remove(originalGroupName);
+                    }
+                }
+            }
         }
 
         internal void GroupShapesPreserveLoadedGroups(Dictionary<string, List<BlendShape>> loadedGroups)

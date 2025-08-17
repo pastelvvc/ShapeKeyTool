@@ -98,6 +98,10 @@ namespace ShapeKeyTools
             persistence.SetGroupFoldouts(groupFoldouts);
             persistence.SetGroupTestSliders(groupTestSliders);
             persistence.SetLockedShapeKeys(lockedShapeKeys);
+            
+            // ユーザーが変更した名前の辞書も保存
+            persistence.SetUserRenamedShapes(window.viewModel.UserRenamedShapes);
+            persistence.SetUserRenamedGroups(window.viewModel.UserRenamedGroups);
 
             // 変更をマーク
             EditorUtility.SetDirty(persistence);
@@ -150,6 +154,27 @@ namespace ShapeKeyTools
             exportData.groupFoldouts = persistence.GetGroupFoldouts();
             exportData.groupTestSliders = persistence.GetGroupTestSliders();
             exportData.lockedShapeKeys = persistence.GetLockedShapeKeys();
+            
+            // ユーザーが変更した名前の辞書も復元
+            var userRenamedShapes = persistence.GetUserRenamedShapes();
+            var userRenamedGroups = persistence.GetUserRenamedGroups();
+            
+            // ViewModelに復元
+            if (window.viewModel.UserRenamedShapes != null)
+                window.viewModel.UserRenamedShapes.Clear();
+            else
+                window.viewModel.UserRenamedShapes = new Dictionary<string, string>();
+                
+            if (window.viewModel.UserRenamedGroups != null)
+                window.viewModel.UserRenamedGroups.Clear();
+            else
+                window.viewModel.UserRenamedGroups = new Dictionary<string, string>();
+                
+            foreach (var kvp in userRenamedShapes)
+                window.viewModel.UserRenamedShapes[kvp.Key] = kvp.Value;
+                
+            foreach (var kvp in userRenamedGroups)
+                window.viewModel.UserRenamedGroups[kvp.Key] = kvp.Value;
 
             Serialization.ApplyExportDataToStateWithOptions(window, exportData, 
                 loadGroupStructure, loadShapeKeyValues, loadLockedStates, loadExtendedInfo,

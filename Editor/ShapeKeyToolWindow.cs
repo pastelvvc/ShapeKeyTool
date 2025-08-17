@@ -254,10 +254,17 @@ namespace ShapeKeyTools
                         }
                     }
                     
+                    // ユーザーが変更した名前がある場合は使用
+                    string displayName = shapeKeyName;
+                    if (viewModel.UserRenamedShapes.ContainsKey(shapeKeyName))
+                    {
+                        displayName = viewModel.UserRenamedShapes[shapeKeyName];
+                    }
+                    
                     blendShapes.Add(
                         new BlendShape
                         {
-                            name = shapeKeyName,
+                            name = displayName,
                             weight = weight,
                             index = i,
                             isLocked = isLocked,
@@ -339,6 +346,268 @@ namespace ShapeKeyTools
             
             // TreeViewを更新
             TreeViewPart.Reload();
+        }
+        
+        /// <summary>
+        /// ブレンドシェイプを再読み込み（グループ名と順序は保持、グループ化は行わない）
+        /// </summary>
+        internal void RefreshBlendShapesWithoutRegrouping()
+        {
+            // メッシュの参照を更新
+            if (selectedRenderer != null)
+            {
+                sharedMesh = selectedRenderer.sharedMesh;
+            }
+            
+            // 既存のグループ順序を保持
+            var existingGroupOrder = viewModel.GroupedShapes.Keys.ToList();
+            
+            // ブレンドシェイプの基本データのみ更新（グループ化は行わない）
+            blendShapes.Clear();
+            if (sharedMesh != null)
+            {
+                for (int i = 0; i < sharedMesh.blendShapeCount; i++)
+                {
+                    string shapeName = sharedMesh.GetBlendShapeName(i);
+                    float weight = selectedRenderer.GetBlendShapeWeight(i);
+                    
+                    // 既存のグループから情報を取得
+                    bool isLocked = false;
+                    bool isExtended = false;
+                    float minValue = -100f;
+                    float maxValue = 200f;
+                    string originalName = "";
+                    
+                    foreach (var group in viewModel.GroupedShapes)
+                    {
+                        var existingShape = group.Value.FirstOrDefault(s => s.name == shapeName);
+                        if (existingShape != null)
+                        {
+                            isLocked = existingShape.isLocked;
+                            isExtended = existingShape.isExtended;
+                            minValue = existingShape.minValue;
+                            maxValue = existingShape.maxValue;
+                            originalName = existingShape.originalName;
+                            break;
+                        }
+                    }
+                    
+                    // 元の名前が設定されていない場合は、メッシュ上の名前を設定
+                    if (string.IsNullOrEmpty(originalName))
+                    {
+                        originalName = shapeName;
+                    }
+                    
+                    blendShapes.Add(
+                        new BlendShape
+                        {
+                            name = shapeName,
+                            weight = weight,
+                            index = i,
+                            isLocked = isLocked,
+                            isExtended = isExtended,
+                            minValue = minValue,
+                            maxValue = maxValue,
+                            originalName = originalName
+                        }
+                    );
+                }
+                
+                // 拡張シェイプキーの情報を復元
+                foreach (var extendedInfo in ExtendedShapeKeyManager.GetAllExtendedShapeKeys())
+                {
+                    string extendedName = extendedInfo.Key;
+                    var info = extendedInfo.Value;
+                    
+                    // 既存のグループから情報を取得
+                    float existingWeight = 0f;
+                    bool isLocked = false;
+                    foreach (var group in viewModel.GroupedShapes)
+                    {
+                        var existingShape = group.Value.FirstOrDefault(s => s.name == extendedName);
+                        if (existingShape != null)
+                        {
+                            existingWeight = existingShape.weight;
+                            isLocked = existingShape.isLocked;
+                            break;
+                        }
+                    }
+                    
+                    blendShapes.Add(
+                        new BlendShape
+                        {
+                            name = extendedName,
+                            weight = existingWeight,
+                            index = -1, // 実際のメッシュに存在しないため-1
+                            isLocked = isLocked,
+                            isExtended = true,
+                            minValue = info.minValue,
+                            maxValue = info.maxValue,
+                            originalName = extendedName
+                        }
+                    );
+                }
+            }
+            
+            // 既存のグループ順序を維持しつつ、シェイプキーを適切に配置
+            MaintainExistingGroupOrder(existingGroupOrder);
+        }
+        
+        /// <summary>
+        /// ユーザーが変更した名前を復元
+        /// </summary>
+        private void RestoreUserRenamedNames(Dictionary<string, string> userRenamedGroups, Dictionary<string, string> userRenamedShapes)
+        {
+            try
+            {
+                // ユーザーが変更したグループ名を復元
+                if (userRenamedGroups != null)
+                {
+                    foreach (var renameInfo in userRenamedGroups)
+                    {
+                        string originalGroupName = renameInfo.Key;
+                        string newGroupName = renameInfo.Value;
+                        
+                        // 元のグループ名が存在し、新しいグループ名が存在しない場合
+                        if (viewModel.GroupedShapes.ContainsKey(originalGroupName) && !viewModel.GroupedShapes.ContainsKey(newGroupName))
+                        {
+                            // グループ名を変更
+                            var shapes = viewModel.GroupedShapes[originalGroupName];
+                            viewModel.GroupedShapes.Remove(originalGroupName);
+                            viewModel.GroupedShapes[newGroupName] = shapes;
+                            
+                            // 関連する状態も移行
+                            if (viewModel.GroupFoldouts.ContainsKey(originalGroupName))
+                            {
+                                viewModel.GroupFoldouts[newGroupName] = viewModel.GroupFoldouts[originalGroupName];
+                                viewModel.GroupFoldouts.Remove(originalGroupName);
+                            }
+                            
+                            if (viewModel.GroupTestSliders.ContainsKey(originalGroupName))
+                            {
+                                viewModel.GroupTestSliders[newGroupName] = viewModel.GroupTestSliders[originalGroupName];
+                                viewModel.GroupTestSliders.Remove(originalGroupName);
+                            }
+                            
+                            if (viewModel.OriginalWeights.ContainsKey(originalGroupName))
+                            {
+                                viewModel.OriginalWeights[newGroupName] = viewModel.OriginalWeights[originalGroupName];
+                                viewModel.OriginalWeights.Remove(originalGroupName);
+                            }
+                        }
+                    }
+                }
+                
+                // ユーザーが変更したシェイプキー名を復元
+                if (userRenamedShapes != null)
+                {
+                    foreach (var renameInfo in userRenamedShapes)
+                    {
+                        string originalShapeName = renameInfo.Key;
+                        string newShapeName = renameInfo.Value;
+                        
+                        // 各グループ内でシェイプキー名を変更
+                        foreach (var group in viewModel.GroupedShapes)
+                        {
+                            var shape = group.Value.FirstOrDefault(s => s.name == originalShapeName);
+                            if (shape != null)
+                            {
+                                shape.name = newShapeName;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // ViewModelの辞書を復元
+                viewModel.UserRenamedGroups = userRenamedGroups ?? new Dictionary<string, string>();
+                viewModel.UserRenamedShapes = userRenamedShapes ?? new Dictionary<string, string>();
+                
+                Debug.Log($"ユーザー変更名を復元完了: グループ={userRenamedGroups?.Count ?? 0}, シェイプキー={userRenamedShapes?.Count ?? 0}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"ユーザー変更名の復元でエラーが発生しました: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 既存のグループ順序を維持しつつ、シェイプキーを適切に配置
+        /// </summary>
+        private void MaintainExistingGroupOrder(List<string> existingGroupOrder)
+        {
+            // 既存のグループ順序を保持した新しい辞書を作成
+            var newGroupedShapes = new Dictionary<string, List<BlendShape>>();
+            var newGroupFoldouts = new Dictionary<string, bool>();
+            var newGroupTestSliders = new Dictionary<string, float>();
+            
+            // 既存の順序でグループを再構築
+            foreach (var groupName in existingGroupOrder)
+            {
+                if (viewModel.GroupedShapes.ContainsKey(groupName))
+                {
+                    newGroupedShapes[groupName] = new List<BlendShape>();
+                    newGroupFoldouts[groupName] = viewModel.GroupFoldouts.ContainsKey(groupName) ? viewModel.GroupFoldouts[groupName] : false;
+                    newGroupTestSliders[groupName] = viewModel.GroupTestSliders.ContainsKey(groupName) ? viewModel.GroupTestSliders[groupName] : 0f;
+                }
+            }
+            
+            // シェイプキーを適切なグループに配置
+            foreach (var blendShape in blendShapes)
+            {
+                bool placed = false;
+                
+                // 既存のグループに配置を試行
+                foreach (var groupName in existingGroupOrder)
+                {
+                    if (viewModel.GroupedShapes.ContainsKey(groupName))
+                    {
+                        var existingShapes = viewModel.GroupedShapes[groupName];
+                        if (existingShapes.Any(s => s.name == blendShape.name))
+                        {
+                            newGroupedShapes[groupName].Add(blendShape);
+                            placed = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // 既存のグループに配置できない場合は、パターンベースでグループ化
+                if (!placed)
+                {
+                    // ユーザーが変更した名前を保持するため、元の名前を確認
+                    string originalName = blendShape.originalName;
+                    if (!string.IsNullOrEmpty(originalName))
+                    {
+                        // 元の名前でパターンベースのグループ名を取得
+                        string groupName = GetGroupName(originalName);
+                        if (!newGroupedShapes.ContainsKey(groupName))
+                        {
+                            newGroupedShapes[groupName] = new List<BlendShape>();
+                            newGroupFoldouts[groupName] = false;
+                            newGroupTestSliders[groupName] = 0f;
+                        }
+                        newGroupedShapes[groupName].Add(blendShape);
+                    }
+                    else
+                    {
+                        // 元の名前がない場合は現在の名前でグループ化
+                        string groupName = GetGroupName(blendShape.name);
+                        if (!newGroupedShapes.ContainsKey(groupName))
+                        {
+                            newGroupedShapes[groupName] = new List<BlendShape>();
+                            newGroupFoldouts[groupName] = false;
+                            newGroupTestSliders[groupName] = 0f;
+                        }
+                        newGroupedShapes[groupName].Add(blendShape);
+                    }
+                }
+            }
+            
+            // 新しい辞書で既存の辞書を置き換え
+            viewModel.GroupedShapes = newGroupedShapes;
+            viewModel.GroupFoldouts = newGroupFoldouts;
+            viewModel.GroupTestSliders = newGroupTestSliders;
         }
 
         internal void UpdateCurrentGroupDisplay()
@@ -663,6 +932,10 @@ namespace ShapeKeyTools
                 viewModel.GroupFoldouts.Clear();
                 viewModel.GroupTestSliders.Clear();
 
+                // ユーザーが変更したグループ名を保持
+                var userRenamedGroups = new Dictionary<string, string>(viewModel.UserRenamedGroups);
+                var userRenamedShapes = new Dictionary<string, string>(viewModel.UserRenamedShapes);
+                
                 // カスタムグループを削除（「その他」グループは保持）
                 var groupsToRemove = new List<string>();
                 foreach (var group in viewModel.GroupedShapes)
@@ -678,8 +951,11 @@ namespace ShapeKeyTools
                     viewModel.GroupedShapes.Remove(groupName);
                 }
 
-                // シェイプキーのデータを再構築
+                // シェイプキーのデータを再構築（グループ化を実行）
                 UpdateBlendShapes();
+                
+                // ユーザーが変更したグループ名を復元
+                RestoreUserRenamedNames(userRenamedGroups, userRenamedShapes);
 
                 // TreeViewを更新
                 TreeViewPart.Reload();
@@ -882,6 +1158,9 @@ namespace ShapeKeyTools
                 {
                     TreeViewPart.GetTreeViewState().expandedIDs.Clear();
                 }
+                
+                // TreeViewの状態を完全にリセット
+                TreeViewPart.ResetTreeViewState();
 
                 // メニューインデックスをリセット
                 fileMenuIndex = 0;
@@ -901,6 +1180,10 @@ namespace ShapeKeyTools
                 option2Enabled = false;
                 option3Enabled = false;
 
+                // ユーザーが変更したグループ名を保持
+                var userRenamedGroups = new Dictionary<string, string>(viewModel.UserRenamedGroups);
+                var userRenamedShapes = new Dictionary<string, string>(viewModel.UserRenamedShapes);
+                
                 // カスタムグループを削除（「その他」グループは保持）
                 var groupsToRemove = new List<string>();
                 foreach (var group in viewModel.GroupedShapes)
@@ -916,8 +1199,11 @@ namespace ShapeKeyTools
                     viewModel.GroupedShapes.Remove(groupName);
                 }
 
-                // シェイプキーのデータを再構築
+                // シェイプキーのデータを再構築（グループ化を実行）
                 UpdateBlendShapes();
+                
+                // ユーザーが変更したグループ名を復元
+                RestoreUserRenamedNames(userRenamedGroups, userRenamedShapes);
 
                 // TreeViewを更新
                 TreeViewPart.Reload();

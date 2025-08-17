@@ -30,6 +30,35 @@ namespace ShapeKeyTools
 
         internal static TreeViewState GetTreeViewState() => state;
 
+                internal static void ResetTreeViewState()
+        {
+            if (state != null)
+            {
+                state.expandedIDs.Clear();
+                state.scrollPos = Vector2.zero;
+                state.selectedIDs.Clear();
+            }
+            
+            if (view != null)
+            {
+                view.ResetViewState();
+            }
+        }
+        
+        /// <summary>
+        /// シェイプキー名がグループヘッダーかどうかを判定
+        /// </summary>
+        internal static bool IsGroupHeader(string shapeName)
+        {
+            if (string.IsNullOrEmpty(shapeName)) return false;
+            string[] headerPatterns = { "==", "!!", "◇◇", "★★", "◆◆", "!!!" };
+            foreach (string pattern in headerPatterns)
+            {
+                if (shapeName.StartsWith(pattern)) return true;
+            }
+            return false;
+        }
+
         private class ShapeKeyTreeView : TreeView
         {
             private ShapeKeyToolWindow tool;
@@ -65,6 +94,30 @@ namespace ShapeKeyTools
             {
                 // TreeViewStateの展開状態をクリア（groupFoldoutsで管理するため）
                 state.expandedIDs.Clear();
+            }
+
+            internal void ResetViewState()
+            {
+                // 名前変更状態をリセット
+                isRenaming = false;
+                renameText = "";
+                renameItemId = -1;
+
+                // ドラッグアンドドロップ状態をリセット
+                draggedItemId = -1;
+                draggedItemName = "";
+                draggedItemDepth = -1;
+
+                // アイテム辞書をクリア
+                itemIdToShapeKey.Clear();
+
+                // TreeViewStateの状態をクリア
+                if (state != null)
+                {
+                    state.expandedIDs.Clear();
+                    state.scrollPos = Vector2.zero;
+                    state.selectedIDs.Clear();
+                }
             }
 
             protected override TreeViewItem BuildRoot()
@@ -585,10 +638,14 @@ namespace ShapeKeyTools
                     var item = FindItem(renameItemId, rootItem);
                         if (item != null)
                     {
-                        if (item.depth == 0)
+                                                if (item.depth == 0)
                         {
                             // グループ名の変更
                             string oldGroupName = item.displayName.Split('(')[0].Trim();
+                            
+                            // デバッグ用ログ
+                            Debug.Log($"グループ名変更: oldGroupName='{oldGroupName}', newName='{renameText}'");
+                            
                             if (tool.viewModel.GroupedShapes.ContainsKey(oldGroupName))
                             {
                                 var shapes = tool.viewModel.GroupedShapes[oldGroupName];
@@ -603,21 +660,56 @@ namespace ShapeKeyTools
                                     tool.viewModel.GroupFoldouts[renameText] = foldoutState;
                                 }
 
-                                    // テストスライダーの値も移行
-                                    if (tool.viewModel.GroupTestSliders.ContainsKey(oldGroupName))
-                                    {
-                                        float slider = tool.viewModel.GroupTestSliders[oldGroupName];
-                                        tool.viewModel.GroupTestSliders.Remove(oldGroupName);
-                                        tool.viewModel.GroupTestSliders[renameText] = slider;
-                                    }
+                                // テストスライダーの値も移行
+                                if (tool.viewModel.GroupTestSliders.ContainsKey(oldGroupName))
+                                {
+                                    float slider = tool.viewModel.GroupTestSliders[oldGroupName];
+                                    tool.viewModel.GroupTestSliders.Remove(oldGroupName);
+                                    tool.viewModel.GroupTestSliders[renameText] = slider;
+                                }
 
-                                    // グループごとの元値キャッシュも移行
-                                    if (tool.viewModel.OriginalWeights.ContainsKey(oldGroupName))
+                                // グループごとの元値キャッシュも移行
+                                if (tool.viewModel.OriginalWeights.ContainsKey(oldGroupName))
+                                {
+                                    var cache = tool.viewModel.OriginalWeights[oldGroupName];
+                                    tool.viewModel.OriginalWeights.Remove(oldGroupName);
+                                    tool.viewModel.OriginalWeights[renameText] = cache;
+                                }
+                                
+                                // ユーザーが変更したグループ名を記録
+                                tool.viewModel.UserRenamedGroups[oldGroupName] = renameText;
+                                
+                                // デバッグ用ログ
+                                Debug.Log($"UserRenamedGroupsに記録: '{oldGroupName}' -> '{renameText}'");
+                                Debug.Log($"現在のUserRenamedGroups辞書: {string.Join(", ", tool.viewModel.UserRenamedGroups.Select(kvp => $"'{kvp.Key}' -> '{kvp.Value}'"))}");
+                                
+                                // グループヘッダーシェイプキーのoriginalNameを更新
+                                foreach (var shape in shapes)
+                                {
+                                    if (IsGroupHeader(shape.name))
                                     {
-                                        var cache = tool.viewModel.OriginalWeights[oldGroupName];
-                                        tool.viewModel.OriginalWeights.Remove(oldGroupName);
-                                        tool.viewModel.OriginalWeights[renameText] = cache;
+                                        // 元のグループ名を保存
+                                        shape.originalName = oldGroupName;
+                                        break;
                                     }
+                                }
+                                
+                                // グループ内の全シェイプキーのoriginalNameを更新
+                                foreach (var shape in shapes)
+                                {
+                                    if (string.IsNullOrEmpty(shape.originalName))
+                                    {
+                                        // 元の名前が設定されていない場合は、メッシュ上の名前を設定
+                                        if (shape.index >= 0 && tool.sharedMesh != null)
+                                        {
+                                            shape.originalName = tool.sharedMesh.GetBlendShapeName(shape.index);
+                                        }
+                                        else
+                                        {
+                                            shape.originalName = shape.name;
+                                        }
+                                    }
+                                }
                             }
                         }
                         else
@@ -664,7 +756,19 @@ namespace ShapeKeyTools
                                     {
                                         // 通常シェイプキーの改名: originalName は維持（メッシュ上の元名）
                                         shape.isExtended = false;
-                                        // shape.originalName は変更しない
+                                        // 元の名前を保存（メッシュ上の実際の名前）
+                                        if (shape.index >= 0 && tool.sharedMesh != null)
+                                        {
+                                            shape.originalName = tool.sharedMesh.GetBlendShapeName(shape.index);
+                                        }
+                                        else
+                                        {
+                                            // インデックスが無効な場合は、現在の名前を元の名前として設定
+                                            shape.originalName = oldShapeName;
+                                        }
+                                        
+                                        // ユーザーが変更したシェイプキー名を記録
+                                        tool.viewModel.UserRenamedShapes[oldShapeName] = renameText;
                                     }
                                     break;
                                 }
@@ -674,6 +778,58 @@ namespace ShapeKeyTools
                 }
 
                 CancelRename();
+                
+                // 名前変更後にデータを永続化
+                SaveNameChanges();
+                
+                // 永続化コンポーネントが存在しない場合は、手動でデータを保存
+                if (tool.selectedRenderer != null)
+                {
+                    var persistence = tool.selectedRenderer.GetComponent<ShapeKeyPersistence>();
+                    if (persistence == null)
+                    {
+                        // 永続化コンポーネントが存在しない場合は作成
+                        persistence = tool.selectedRenderer.gameObject.AddComponent<ShapeKeyPersistence>();
+                    }
+                    
+                    // 即座にデータを保存
+                    var groups = new List<ShapeKeyPersistence.GroupData>();
+                    foreach (var group in tool.viewModel.GroupedShapes)
+                    {
+                        var groupData = new ShapeKeyPersistence.GroupData
+                        {
+                            groupName = group.Key,
+                            shapeKeys = new List<ShapeKeyPersistence.ShapeKeyData>()
+                        };
+                        
+                        foreach (var shape in group.Value)
+                        {
+                            var shapeData = new ShapeKeyPersistence.ShapeKeyData
+                            {
+                                name = shape.name,
+                                weight = shape.weight,
+                                isLocked = shape.isLocked,
+                                isExtended = shape.isExtended,
+                                originalName = shape.originalName,
+                                minValue = shape.minValue,
+                                maxValue = shape.maxValue
+                            };
+                            groupData.shapeKeys.Add(shapeData);
+                        }
+                        
+                        groups.Add(groupData);
+                    }
+                    
+                    persistence.SetGroups(groups);
+                    persistence.SetGroupFoldouts(new Dictionary<string, bool>(tool.viewModel.GroupFoldouts));
+                    persistence.SetGroupTestSliders(new Dictionary<string, float>(tool.viewModel.GroupTestSliders));
+                    persistence.SetLockedShapeKeys(new Dictionary<int, bool>(tool.viewModel.LockedShapeKeys));
+                    
+                    // シーンを更新
+                    EditorUtility.SetDirty(tool.selectedRenderer);
+                    EditorUtility.SetDirty(tool.selectedRenderer.gameObject);
+                }
+                
                 Reload();
                 // 右パネル/シーンを更新
                 ApplyScheduler.RequestReload();
@@ -685,6 +841,83 @@ namespace ShapeKeyTools
                 isRenaming = false;
                 renameText = "";
                 renameItemId = -1;
+            }
+            
+            /// <summary>
+            /// 名前変更を永続化する
+            /// </summary>
+            private void SaveNameChanges()
+            {
+                try
+                {
+                    if (tool.selectedRenderer != null)
+                    {
+                        // 永続化コンポーネントが存在しない場合は作成
+                        var persistence = tool.selectedRenderer.GetComponent<ShapeKeyPersistence>();
+                        if (persistence == null)
+                        {
+                            persistence = tool.selectedRenderer.gameObject.AddComponent<ShapeKeyPersistence>();
+                        }
+                        
+                        // 永続化データを更新
+                        var groups = new List<ShapeKeyPersistence.GroupData>();
+                        foreach (var group in tool.viewModel.GroupedShapes)
+                        {
+                            var groupData = new ShapeKeyPersistence.GroupData
+                            {
+                                groupName = group.Key,
+                                shapeKeys = new List<ShapeKeyPersistence.ShapeKeyData>()
+                            };
+                            
+                            foreach (var shape in group.Value)
+                            {
+                                var shapeData = new ShapeKeyPersistence.ShapeKeyData
+                                {
+                                    name = shape.name,
+                                    weight = shape.weight,
+                                    isLocked = shape.isLocked,
+                                    isExtended = shape.isExtended,
+                                    originalName = shape.originalName,
+                                    minValue = shape.minValue,
+                                    maxValue = shape.maxValue
+                                };
+                                groupData.shapeKeys.Add(shapeData);
+                            }
+                            
+                            groups.Add(groupData);
+                        }
+                        
+                        // グループの展開状態とテストスライダーの値を保存
+                        var groupFoldouts = new Dictionary<string, bool>(tool.viewModel.GroupFoldouts);
+                        var groupTestSliders = new Dictionary<string, float>(tool.viewModel.GroupTestSliders);
+                        var lockedShapeKeys = new Dictionary<int, bool>(tool.viewModel.LockedShapeKeys);
+                        
+                        persistence.SetGroups(groups);
+                        persistence.SetGroupFoldouts(groupFoldouts);
+                        persistence.SetGroupTestSliders(groupTestSliders);
+                        persistence.SetLockedShapeKeys(lockedShapeKeys);
+                        
+                        // ユーザーが変更した名前の辞書も保存
+                        persistence.SetUserRenamedShapes(new Dictionary<string, string>(tool.viewModel.UserRenamedShapes));
+                        persistence.SetUserRenamedGroups(new Dictionary<string, string>(tool.viewModel.UserRenamedGroups));
+                        
+                        // シーンを更新
+                        EditorUtility.SetDirty(tool.selectedRenderer);
+                        EditorUtility.SetDirty(tool.selectedRenderer.gameObject);
+                        
+                        // 強制的にシーンを保存
+                        if (UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().isDirty)
+                        {
+                            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+                        }
+                        
+                        Debug.Log($"名前変更が永続化されました: {tool.selectedRenderer.gameObject.name}");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"名前変更の永続化でエラーが発生しました: {ex.Message}");
+                }
             }
 
             /// <summary>
@@ -880,9 +1113,41 @@ namespace ShapeKeyTools
                         }
                     );
 
+                    // 元の名前に戻すメニュー（名前が変更されている場合のみ表示）
+                    if (item.depth == 1 && itemIdToShapeKey.TryGetValue(item.id, out var currentBlendShape))
+                    {
+                        string originalName = GetOriginalName(currentBlendShape);
+                        if (!string.IsNullOrEmpty(originalName) && originalName != currentBlendShape.name)
+                        {
+                            menu.AddItem(
+                                new GUIContent($"元の名前に戻す ({originalName})"),
+                                false,
+                                () =>
+                                {
+                                    RestoreOriginalName(currentBlendShape, originalName);
+                                }
+                            );
+                        }
+                    }
+
                     if (item.depth == 0)
                     {
                         // グループの場合の追加メニュー
+                        
+                        // 元の名前に戻すメニュー（名前が変更されている場合のみ表示）
+                        string originalGroupName = GetOriginalGroupName(currentName);
+                        if (!string.IsNullOrEmpty(originalGroupName) && originalGroupName != currentName)
+                        {
+                            menu.AddItem(
+                                new GUIContent($"元の名前に戻す ({originalGroupName})"),
+                                false,
+                                () =>
+                                {
+                                    RestoreOriginalGroupName(currentName, originalGroupName);
+                                }
+                            );
+                        }
+                        
                         // 削除メニュー（「その他」グループは削除不可）
                         if (currentName != "その他")
                         {
@@ -966,6 +1231,324 @@ namespace ShapeKeyTools
             // GroupAsRootGroupはTreeViewCommandServiceに移行済み
 
             // DeleteShapeKeyはTreeViewCommandServiceに移行済み
+
+                        /// <summary>
+            /// シェイプキーの元の名前を取得
+            /// </summary>
+            private string GetOriginalName(BlendShape blendShape)
+            {
+                if (blendShape == null) return "";
+                
+                // 拡張シェイプキーの場合はoriginalNameプロパティを使用
+                if (blendShape.isExtended && !string.IsNullOrEmpty(blendShape.originalName))
+                {
+                    return blendShape.originalName;
+                }
+                
+                // 通常のシェイプキーの場合、メッシュ上の実際の名前を取得
+                if (blendShape.index >= 0 && tool.sharedMesh != null)
+                {
+                    return tool.sharedMesh.GetBlendShapeName(blendShape.index);
+                }
+                
+                // フォールバック: originalNameプロパティを使用
+                return blendShape.originalName;
+            }
+            
+            /// <summary>
+            /// グループ名の元の名前を取得
+            /// </summary>
+            private string GetOriginalGroupName(string currentGroupName)
+            {
+                if (string.IsNullOrEmpty(currentGroupName) || currentGroupName == "その他")
+                    return "";
+                
+                // デバッグ用ログ
+                Debug.Log($"GetOriginalGroupName呼び出し: currentGroupName='{currentGroupName}'");
+                
+                // まず、ユーザーが変更したグループ名の辞書から元の名前を取得
+                if (tool.viewModel.UserRenamedGroups != null)
+                {
+                    Debug.Log($"UserRenamedGroups辞書の内容: {string.Join(", ", tool.viewModel.UserRenamedGroups.Select(kvp => $"'{kvp.Key}' -> '{kvp.Value}'"))}");
+                    
+                    foreach (var renameInfo in tool.viewModel.UserRenamedGroups)
+                    {
+                        if (renameInfo.Value == currentGroupName)
+                        {
+                            Debug.Log($"UserRenamedGroupsから元の名前を発見: '{renameInfo.Key}' -> '{currentGroupName}'");
+                            return renameInfo.Key;
+                        }
+                    }
+                    Debug.Log($"UserRenamedGroupsに該当するエントリが見つかりませんでした");
+                }
+                else
+                {
+                    Debug.Log("UserRenamedGroups辞書がnullです");
+                }
+                
+                // ユーザー変更辞書にない場合は、メッシュ上のグループヘッダーから取得
+                if (tool.sharedMesh != null)
+                {
+                    for (int i = 0; i < tool.sharedMesh.blendShapeCount; i++)
+                    {
+                        string shapeName = tool.sharedMesh.GetBlendShapeName(i);
+                        if (IsGroupHeader(shapeName))
+                        {
+                            string extractedGroupName = ExtractGroupName(shapeName);
+                            if (extractedGroupName == currentGroupName)
+                            {
+                                // 識別子を除去したグループ名を返す（識別子付きの名前は返さない）
+                                Debug.Log($"メッシュから元の名前を発見: '{shapeName}' -> '{currentGroupName}'");
+                                return extractedGroupName; // shapeNameではなくextractedGroupNameを返す
+                            }
+                        }
+                    }
+                }
+                
+                Debug.Log($"元の名前が見つかりませんでした: '{currentGroupName}'");
+                return "";
+            }
+            
+            /// <summary>
+            /// シェイプキー名がグループヘッダーかどうかを判定
+            /// </summary>
+            private bool IsGroupHeader(string shapeName)
+            {
+                if (string.IsNullOrEmpty(shapeName)) return false;
+                string[] headerPatterns = { "==", "!!", "◇◇", "★★", "◆◆", "!!!" };
+                foreach (string pattern in headerPatterns)
+                {
+                    if (shapeName.StartsWith(pattern)) return true;
+                }
+                return false;
+            }
+            
+            /// <summary>
+            /// グループヘッダーからグループ名を抽出
+            /// </summary>
+            private string ExtractGroupName(string headerName)
+            {
+                if (string.IsNullOrEmpty(headerName)) return "その他";
+                string[] headerPatterns = { "==", "!!", "◇◇", "★★", "◆◆", "!!!" };
+                foreach (string pattern in headerPatterns)
+                {
+                    if (headerName.StartsWith(pattern))
+                    {
+                        string groupName = headerName.Substring(pattern.Length);
+                        while (groupName.Length > 0 && (char.IsPunctuation(groupName[groupName.Length - 1]) || char.IsSymbol(groupName[groupName.Length - 1])))
+                        {
+                            groupName = groupName.Substring(0, groupName.Length - 1);
+                        }
+                        return groupName.Trim();
+                    }
+                }
+                return "その他";
+            }
+
+                        /// <summary>
+            /// シェイプキーを元の名前に戻す
+            /// </summary>
+            private void RestoreOriginalName(BlendShape blendShape, string originalName)
+            {
+                if (blendShape == null || string.IsNullOrEmpty(originalName)) return;
+                
+                // 確認ダイアログを表示
+                bool confirmed = EditorUtility.DisplayDialog(
+                    "元の名前に戻す確認",
+                    $"シェイプキー '{blendShape.name}' を元の名前 '{originalName}' に戻しますか？\n\n" +
+                    "この操作は元に戻せません。",
+                    "戻す",
+                    "キャンセル"
+                );
+                
+                if (!confirmed) return;
+                
+                try
+                {
+                    // 元の名前を保存
+                    string oldName = blendShape.name;
+                    
+                    // 名前を元に戻す
+                    blendShape.name = originalName;
+                    
+                    // 拡張シェイプキーの場合は、originalNameプロパティも更新
+                    if (blendShape.isExtended)
+                    {
+                        blendShape.originalName = originalName;
+                        
+                        // 永続化マネージャーの情報も更新
+                        if (ExtendedShapeKeyManager.TryGetExtendedShapeKeyInfo(oldName, out var extendedInfo))
+                        {
+                            ExtendedShapeKeyManager.RemoveExtendedShapeKey(oldName);
+                            var newInfo = new ExtendedShapeKeyInfo(originalName, extendedInfo.minValue, extendedInfo.maxValue);
+                            ExtendedShapeKeyManager.RegisterExtendedShapeKey(originalName, newInfo);
+                        }
+                    }
+                    
+                    // グループ内のシェイプキーリストを更新
+                    foreach (var group in tool.viewModel.GroupedShapes)
+                    {
+                        var shape = group.Value.FirstOrDefault(s => s.name == oldName);
+                        if (shape != null)
+                        {
+                            // 名前を更新
+                            shape.name = originalName;
+                            if (shape.isExtended)
+                            {
+                                shape.originalName = originalName;
+                            }
+                            break;
+                        }
+                    }
+                    
+                    // ユーザー変更名の辞書から該当するエントリを削除
+                    if (tool.viewModel.UserRenamedShapes.ContainsKey(originalName))
+                    {
+                        tool.viewModel.UserRenamedShapes.Remove(originalName);
+                    }
+                    
+                    // 名前を元に戻した後に永続化
+                    SaveNameChanges();
+                    
+                    // TreeViewを更新
+                    Reload();
+                    
+                    // メインウィンドウも更新
+                    TreeViewPart.Repaint();
+                    
+                    // 成功メッセージを表示
+                    EditorUtility.DisplayDialog(
+                        "完了",
+                        $"シェイプキーの名前を '{originalName}' に戻しました。",
+                        "OK"
+                    );
+                }
+                catch (System.Exception ex)
+                {
+                    EditorUtility.DisplayDialog(
+                        "エラー",
+                        $"元の名前に戻す処理でエラーが発生しました:\n{ex.Message}",
+                        "OK"
+                    );
+                }
+            }
+            
+            /// <summary>
+            /// グループ名を元の名前に戻す
+            /// </summary>
+            private void RestoreOriginalGroupName(string currentGroupName, string originalName)
+            {
+                if (string.IsNullOrEmpty(currentGroupName) || string.IsNullOrEmpty(originalName)) return;
+                
+                // 確認ダイアログを表示（識別子を除去した名前を表示）
+                string displayOriginalName = originalName;
+                if (IsGroupHeader(originalName))
+                {
+                    displayOriginalName = ExtractGroupName(originalName);
+                }
+                
+                bool confirmed = EditorUtility.DisplayDialog(
+                    "元の名前に戻す確認",
+                    $"グループ '{currentGroupName}' を元の名前 '{displayOriginalName}' に戻しますか？\n\n" +
+                    "この操作は元に戻せません。",
+                    "戻す",
+                    "キャンセル"
+                );
+                
+                if (!confirmed) return;
+                
+                try
+                {
+                                            // グループ内のシェイプキーを取得
+                        if (tool.viewModel.GroupedShapes.TryGetValue(currentGroupName, out var shapes))
+                        {
+                            // 新しいグループ名でグループを作成（識別子を除去した名前を使用）
+                            string newGroupName = originalName;
+                            if (IsGroupHeader(originalName))
+                            {
+                                newGroupName = ExtractGroupName(originalName);
+                            }
+                            
+                            tool.viewModel.GroupedShapes[newGroupName] = new List<BlendShape>(shapes);
+                            
+                            // 展開状態を移行
+                            if (tool.viewModel.GroupFoldouts.ContainsKey(currentGroupName))
+                            {
+                                tool.viewModel.GroupFoldouts[newGroupName] = tool.viewModel.GroupFoldouts[currentGroupName];
+                                tool.viewModel.GroupFoldouts.Remove(currentGroupName);
+                            }
+                            
+                            // テストスライダーの値を移行
+                            if (tool.viewModel.GroupTestSliders.ContainsKey(currentGroupName))
+                            {
+                                tool.viewModel.GroupTestSliders[newGroupName] = tool.viewModel.GroupTestSliders[currentGroupName];
+                                tool.viewModel.GroupTestSliders.Remove(currentGroupName);
+                            }
+                            
+                            // グループごとの元値キャッシュも移行
+                            if (tool.viewModel.OriginalWeights.ContainsKey(currentGroupName))
+                            {
+                                tool.viewModel.OriginalWeights[newGroupName] = tool.viewModel.OriginalWeights[currentGroupName];
+                                tool.viewModel.OriginalWeights.Remove(currentGroupName);
+                            }
+                            
+                            // グループ内のシェイプキーのoriginalNameプロパティを更新
+                            foreach (var shape in shapes)
+                            {
+                                if (IsGroupHeader(shape.name))
+                                {
+                                    // グループヘッダーシェイプキーの場合、元のグループ名を保存
+                                    shape.originalName = currentGroupName;
+                                }
+                                else if (string.IsNullOrEmpty(shape.originalName))
+                                {
+                                    // 元の名前が設定されていない場合は、メッシュ上の名前を設定
+                                    if (shape.index >= 0 && tool.sharedMesh != null)
+                                    {
+                                        shape.originalName = tool.sharedMesh.GetBlendShapeName(shape.index);
+                                    }
+                                    else
+                                    {
+                                        shape.originalName = shape.name;
+                                    }
+                                }
+                            }
+                            
+                            // 元のグループを削除
+                            tool.viewModel.GroupedShapes.Remove(currentGroupName);
+                            
+                            // ユーザー変更グループ名の辞書から該当するエントリを削除
+                            if (tool.viewModel.UserRenamedGroups.ContainsKey(originalName))
+                            {
+                                tool.viewModel.UserRenamedGroups.Remove(originalName);
+                            }
+                            
+                            // グループ名を元に戻した後に永続化
+                            SaveNameChanges();
+                        
+                        // TreeViewを更新
+                        Reload();
+                        
+                        // メインウィンドウも更新
+                        TreeViewPart.Repaint();
+                        
+                        // 成功メッセージを表示（識別子を除去した名前を表示）
+                        EditorUtility.DisplayDialog(
+                            "完了",
+                            $"グループ名を '{displayOriginalName}' に戻しました。",
+                            "OK"
+                        );
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    EditorUtility.DisplayDialog(
+                        "エラー",
+                        $"グループ名を元に戻す処理でエラーが発生しました:\n{ex.Message}",
+                        "OK"
+                    );
+                }
+            }
         }
     }
 }

@@ -614,11 +614,27 @@ namespace ShapeKeyTools
                                         }
 
                                         // ユーザー編集フラグ
-                                        if (window.viewModel.GroupedShapes.TryGetValue(groupName, out var _))
+                                        if (Mathf.Abs(normalizedWeight) <= 0.01f)
                                         {
-                                            if (!window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
-                                                window.viewModel.UserEditedDuringTest[groupName] = new HashSet<string>();
-                                            window.viewModel.UserEditedDuringTest[groupName].Add(blendShape.name);
+                                            // 値が0になった場合はユーザー編集フラグをクリア
+                                            if (window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
+                                            {
+                                                window.viewModel.UserEditedDuringTest[groupName].Remove(blendShape.name);
+                                                // 空になった場合はグループ自体を削除
+                                                if (window.viewModel.UserEditedDuringTest[groupName].Count == 0)
+                                                {
+                                                    window.viewModel.UserEditedDuringTest.Remove(groupName);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (window.viewModel.GroupedShapes.TryGetValue(groupName, out var _))
+                                            {
+                                                if (!window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
+                                                    window.viewModel.UserEditedDuringTest[groupName] = new HashSet<string>();
+                                                window.viewModel.UserEditedDuringTest[groupName].Add(blendShape.name);
+                                            }
                                         }
                                     }
                                 }
@@ -668,11 +684,27 @@ namespace ShapeKeyTools
                                             }
 
                                             // ユーザー編集フラグ
-                                            if (window.viewModel.GroupedShapes.TryGetValue(groupName, out var _))
+                                            if (Mathf.Abs(normalizedWeight) <= 0.01f)
                                             {
-                                                if (!window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
-                                                    window.viewModel.UserEditedDuringTest[groupName] = new HashSet<string>();
-                                                window.viewModel.UserEditedDuringTest[groupName].Add(blendShape.name);
+                                                // 値が0になった場合はユーザー編集フラグをクリア
+                                                if (window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
+                                                {
+                                                    window.viewModel.UserEditedDuringTest[groupName].Remove(blendShape.name);
+                                                    // 空になった場合はグループ自体を削除
+                                                    if (window.viewModel.UserEditedDuringTest[groupName].Count == 0)
+                                                    {
+                                                        window.viewModel.UserEditedDuringTest.Remove(groupName);
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (window.viewModel.GroupedShapes.TryGetValue(groupName, out var _))
+                                                {
+                                                    if (!window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
+                                                        window.viewModel.UserEditedDuringTest[groupName] = new HashSet<string>();
+                                                    window.viewModel.UserEditedDuringTest[groupName].Add(blendShape.name);
+                                                }
                                             }
                                         }
                                     }
@@ -766,12 +798,29 @@ namespace ShapeKeyTools
                                         if (!blendShape.isLocked && sliderChanged && Mathf.Abs(normalNewWeight - blendShape.weight) > 0.01f)
                                         {
                                             BlendShapeCommandService.SetWeight(window, blendShape, normalNewWeight);
-                                            // 高速探査中にユーザーが手で変更したことを記録
-                                            if (window.viewModel.GroupedShapes.TryGetValue(groupName, out var _))
+                                            
+                                            // 値が0になった場合はユーザー編集フラグをクリア
+                                            if (Mathf.Abs(normalNewWeight) <= 0.01f)
                                             {
-                                                if (!window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
-                                                    window.viewModel.UserEditedDuringTest[groupName] = new HashSet<string>();
-                                                window.viewModel.UserEditedDuringTest[groupName].Add(blendShape.name);
+                                                if (window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
+                                                {
+                                                    window.viewModel.UserEditedDuringTest[groupName].Remove(blendShape.name);
+                                                    // 空になった場合はグループ自体を削除
+                                                    if (window.viewModel.UserEditedDuringTest[groupName].Count == 0)
+                                                    {
+                                                        window.viewModel.UserEditedDuringTest.Remove(groupName);
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // 高速探査中にユーザーが手で変更したことを記録
+                                                if (window.viewModel.GroupedShapes.TryGetValue(groupName, out var _))
+                                                {
+                                                    if (!window.viewModel.UserEditedDuringTest.ContainsKey(groupName))
+                                                        window.viewModel.UserEditedDuringTest[groupName] = new HashSet<string>();
+                                                    window.viewModel.UserEditedDuringTest[groupName].Add(blendShape.name);
+                                                }
                                             }
                                             
                                             // 拡張シェイプキーが存在する場合は永続化マネージャーを更新
